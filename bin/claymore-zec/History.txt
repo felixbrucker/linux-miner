@@ -1,6 +1,14 @@
 VERSION HISTORY
 
 
+v10.0
+---------------------------------------------------------------------
+
+- improved speed for most cards, up to 8% (depends on card model). About 340H/s on stock 390X, 255H/s on stock RX480, 320H/x on stock Nano.
+- added "-a" option to select best algorithm implementation for your GPU.
+
+
+
 v9.3
 ---------------------------------------------------------------------
 

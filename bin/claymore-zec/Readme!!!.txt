@@ -46,6 +46,8 @@ COMMAND LINE OPTIONS:
 
 -zpsw 	Password for ZCash pool, use "x" as password.
 
+-a	algoritm selection. Possible values: 0..3. 0 - autodetect. You can also specify values for every card, for example "-a 0,3,1". Default value is "0".
+
 -i	mining intensity. Possible values: 0...8. 0 - lowest intensity and CPU usage, 8 - maximal intensity. You can also specify values for every card, for example "-i 8,5,6". Default value is "6".
 
 -allpools Specify "-allpools 1" if miner does not want to mine on specified pool (because it cannot mine devfee on that pool), but you agree to use some default pools for devfee mining. 
@@ -154,7 +156,7 @@ SAMPLE USAGE
 	ZecMiner64.exe -zpool ssl://us-east.equihash-hub.miningpoolhub.com:20570 -zwal YourLogin.YourWorkerName -zpsw YourWorkerPassword
 
  coinmine SSL/TLS connection:
-   ZecMiner64.exe -zpool ssl://zec.coinmine.pl:7017 -zwal YourLogin.YourWorkerName -zpsw YourWorkerPassword
+	ZecMiner64.exe -zpool ssl://zec.coinmine.pl:7017 -zwal YourLogin.YourWorkerName -zpsw YourWorkerPassword
 
  flypool (unencrypted connection): 
 	ZecMiner64.exe -zpool eu1-zcash.flypool.org:3333 -zwal t1RjQjDbPQ9Syp97DHFyzvgZhcjgLTMwhaq.YourWorkerName -zpsw x

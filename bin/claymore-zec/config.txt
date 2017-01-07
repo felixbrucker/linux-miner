@@ -3,3 +3,5 @@
 -zpsw z
 #-tt 75
 #-i 8
+#-allpools 1
+#-a 2
