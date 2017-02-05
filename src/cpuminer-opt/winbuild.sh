@@ -23,4 +23,3 @@ CFLAGS="-O3 -march=native -Wall" CXXFLAGS="$CFLAGS -std=gnu++11 -fpermissive" ./
 make -j 4
 
 strip -s cpuminer
-
