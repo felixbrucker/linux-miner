@@ -66,7 +66,7 @@ inline void initState( uint64_t State[/*16*/] )
 
 #else
     //First 512 bis are zeros
-    memset( State, 0, 64 );
+    memset( State, 0, 64);
     //Remainder BLOCK_LEN_BLAKE2_SAFE_BYTES are reserved to the IV
     State[8]  = blake2b_IV[0];
     State[9]  = blake2b_IV[1];
@@ -104,8 +104,7 @@ inline static void blake2bLyra( uint64_t *v )
  * Executes a reduced version of Blake2b's G function with only one round
  * @param v     A 1024-bit (16 uint64_t) array to be processed by Blake2b's G function
  */
-inline static void reducedBlake2bLyra( uint64_t *v )
-{
+inline static void reducedBlake2bLyra(uint64_t *v) {
     ROUND_LYRA(0);
 }
 
@@ -140,7 +139,7 @@ inline void squeeze( uint64_t *State, byte *Out, unsigned int len )
 #elif defined (__AVX__)
 
     const int len_m128i = len / 16;
-    const int fullBlocks = len_m128i / BLOCK_LEN_M128I;
+    const int fullBlocks = len_m128i / BLOCK_LEN_M256I;
     __m128i* state = (__m128i*)State;
     __m128i* out   = (__m128i*)Out;
     int i;
@@ -301,12 +300,6 @@ inline void reducedSqueezeRow0( uint64_t* State, uint64_t* rowOut,
 
 #if defined (__AVX2__)
 
-    __m256i* state = (__m256i*)State;
-    __m256i  state0 = _mm256_load_si256(  state    );
-    __m256i  state1 = _mm256_load_si256( &state[1] );
-    __m256i  state2 = _mm256_load_si256( &state[2] );
-    __m256i  state3 = _mm256_load_si256( &state[3] );
-
     __m256i* out   = (__m256i*)rowOut + ( (nCols-1) * BLOCK_LEN_M256I );
 
     for ( i = 0; i < 9; i += 3)
@@ -314,6 +307,12 @@ inline void reducedSqueezeRow0( uint64_t* State, uint64_t* rowOut,
         _mm_prefetch( out - i,     _MM_HINT_T0 );
         _mm_prefetch( out - i - 2, _MM_HINT_T0 );
     }
+
+    __m256i* state = (__m256i*)State;
+    __m256i  state0 = _mm256_load_si256(  state    );
+    __m256i  state1 = _mm256_load_si256( &state[1] );
+    __m256i  state2 = _mm256_load_si256( &state[2] );
+    __m256i  state3 = _mm256_load_si256( &state[3] );
 
     for ( i = 0; i < nCols; i++ )
     {
@@ -338,6 +337,14 @@ inline void reducedSqueezeRow0( uint64_t* State, uint64_t* rowOut,
 
 #elif defined (__AVX__)
 
+    __m128i* out   = (__m128i*)rowOut + ( (nCols-1) * BLOCK_LEN_M128I );
+
+    for ( i = 0; i < 6; i += 3)
+    {
+        _mm_prefetch( out - i,     _MM_HINT_T0 );
+        _mm_prefetch( out - i - 2, _MM_HINT_T0 );
+    }
+
     __m128i* state = (__m128i*)State;
     __m128i  state0 = _mm_load_si128(  state    );
     __m128i  state1 = _mm_load_si128( &state[1] );
@@ -347,14 +354,6 @@ inline void reducedSqueezeRow0( uint64_t* State, uint64_t* rowOut,
     __m128i  state5 = _mm_load_si128( &state[5] );
     __m128i  state6 = _mm_load_si128( &state[6] );
     __m128i  state7 = _mm_load_si128( &state[7] );
-
-    __m128i* out   = (__m128i*)rowOut + ( (nCols-1) * BLOCK_LEN_M128I );
-
-    for ( i = 0; i < 6; i += 3)
-    {
-        _mm_prefetch( out - i,     _MM_HINT_T0 );
-        _mm_prefetch( out - i - 2, _MM_HINT_T0 );
-    }
 
     for ( i = 0; i < nCols; i++ )
     {
@@ -391,6 +390,7 @@ inline void reducedSqueezeRow0( uint64_t* State, uint64_t* rowOut,
 
     for ( i = 0; i < nCols; i++ )
     {
+
        ptrWord[0]  = State[0];
        ptrWord[1]  = State[1];
        ptrWord[2]  = State[2];
@@ -410,7 +410,9 @@ inline void reducedSqueezeRow0( uint64_t* State, uint64_t* rowOut,
        //Applies the reduced-round transformation f to the sponge's state
        reducedBlake2bLyra( State);
     }
+
 #endif
+
 }
 
 /**
@@ -429,12 +431,6 @@ inline void reducedDuplexRow1( uint64_t *State, uint64_t *rowIn,
 
 #if defined (__AVX2__)
 
-    __m256i* state = (__m256i*)State;
-    __m256i  state0 = _mm256_load_si256(  state    );
-    __m256i  state1 = _mm256_load_si256( &state[1] );
-    __m256i  state2 = _mm256_load_si256( &state[2] );
-    __m256i  state3 = _mm256_load_si256( &state[3] );
-
     __m256i* in    = (__m256i*)rowIn;
     __m256i* out   = (__m256i*)rowOut + ( (nCols-1) * BLOCK_LEN_M256I );
 
@@ -445,6 +441,12 @@ inline void reducedDuplexRow1( uint64_t *State, uint64_t *rowIn,
         _mm_prefetch( out - i,     _MM_HINT_T0 );
         _mm_prefetch( out - i - 2, _MM_HINT_T0 );
     }
+
+    __m256i* state = (__m256i*)State;
+    __m256i  state0 = _mm256_load_si256(  state    );
+    __m256i  state1 = _mm256_load_si256( &state[1] );
+    __m256i  state2 = _mm256_load_si256( &state[2] );
+    __m256i  state3 = _mm256_load_si256( &state[3] );
 
     for ( i = 0; i < nCols; i++ )
     {
@@ -477,16 +479,6 @@ inline void reducedDuplexRow1( uint64_t *State, uint64_t *rowIn,
 
 #elif defined (__AVX__)
 
-    __m128i* state = (__m128i*)State;
-    __m128i  state0 = _mm_load_si128(  state    );
-    __m128i  state1 = _mm_load_si128( &state[1] );
-    __m128i  state2 = _mm_load_si128( &state[2] );
-    __m128i  state3 = _mm_load_si128( &state[3] );
-    __m128i  state4 = _mm_load_si128( &state[4] );
-    __m128i  state5 = _mm_load_si128( &state[5] );
-    __m128i  state6 = _mm_load_si128( &state[6] );
-    __m128i  state7 = _mm_load_si128( &state[7] );
-
     __m128i*  in   = (__m128i*)rowIn;
     __m128i* out   = (__m128i*)rowOut + ( (nCols-1) * BLOCK_LEN_M128I );
 
@@ -498,12 +490,18 @@ inline void reducedDuplexRow1( uint64_t *State, uint64_t *rowIn,
         _mm_prefetch( out - i - 2, _MM_HINT_T0 );
     }
 
+    __m128i* state = (__m128i*)State;
+    __m128i  state0 = _mm_load_si128(  state    );
+    __m128i  state1 = _mm_load_si128( &state[1] );
+    __m128i  state2 = _mm_load_si128( &state[2] );
+    __m128i  state3 = _mm_load_si128( &state[3] );
+    __m128i  state4 = _mm_load_si128( &state[4] );
+    __m128i  state5 = _mm_load_si128( &state[5] );
+    __m128i  state6 = _mm_load_si128( &state[6] );
+    __m128i  state7 = _mm_load_si128( &state[7] );
+
     for ( i = 0; i < nCols; i++ )
     {
-         _mm_prefetch( in  - 6, _MM_HINT_T0 );
-         _mm_prefetch( in  - 7, _MM_HINT_T0 );
-         _mm_prefetch( out - 6, _MM_HINT_T0 );
-         _mm_prefetch( out - 7, _MM_HINT_T0 );
 
          state0 = _mm_xor_si128( state0, in[0] );
          state1 = _mm_xor_si128( state1, in[1] );
@@ -608,42 +606,44 @@ inline void reducedDuplexRowSetup( uint64_t *State, uint64_t *rowIn,
 
 #if defined (__AVX2__)
 
+    __m256i* in    = (__m256i*)rowIn;
+    __m256i* inout = (__m256i*)rowInOut;
+    __m256i* out   = (__m256i*)rowOut + ( (nCols-1) * BLOCK_LEN_M256I );
+
+    for ( i = 0; i < 9; i += 3)
+    {
+        _mm_prefetch( in    + i,     _MM_HINT_T0 );
+        _mm_prefetch( in    + i + 2, _MM_HINT_T0 );
+        _mm_prefetch( out   - i,     _MM_HINT_T0 );
+        _mm_prefetch( out   - i - 2, _MM_HINT_T0 );
+        _mm_prefetch( inout + i,     _MM_HINT_T0 );
+        _mm_prefetch( inout + i + 2, _MM_HINT_T0 );
+    }
+
     __m256i* state = (__m256i*)State;
     __m256i  state0 = _mm256_load_si256(  state    );
     __m256i  state1 = _mm256_load_si256( &state[1] );
     __m256i  state2 = _mm256_load_si256( &state[2] );
     __m256i  state3 = _mm256_load_si256( &state[3] );
 
-    __m256i* in    = (__m256i*)rowIn;
-    __m256i* inout = (__m256i*)rowInOut;
-    __m256i* out   = (__m256i*)rowOut + ( (nCols-1) * BLOCK_LEN_M256I );
     __m256i  t0, t1, t2;
-
-    for ( i = 0; i < 9; i += 3)
-    {
-        _mm_prefetch( in    + i,     _MM_HINT_T0 );
-        _mm_prefetch( in    + i + 2, _MM_HINT_T0 );
-        _mm_prefetch( inout + i,     _MM_HINT_T0 );
-        _mm_prefetch( inout + i + 2, _MM_HINT_T0 );
-        _mm_prefetch( out   - i,     _MM_HINT_T0 );
-        _mm_prefetch( out   - i - 2, _MM_HINT_T0 );
-    }
 
     for ( i = 0; i < nCols; i++ )
     {
+
        _mm_prefetch( in    +  9, _MM_HINT_T0 );
        _mm_prefetch( in    + 11, _MM_HINT_T0 );
-       _mm_prefetch( inout +  9, _MM_HINT_T0 );
-       _mm_prefetch( inout + 11, _MM_HINT_T0 );
        _mm_prefetch( out   -  9, _MM_HINT_T0 );
        _mm_prefetch( out   - 11, _MM_HINT_T0 );
+       _mm_prefetch( inout +  9, _MM_HINT_T0 );
+       _mm_prefetch( inout + 11, _MM_HINT_T0 );
 
        state0 = _mm256_xor_si256( state0,
-                                  _mm256_add_epi64( in[0], inout[0] ) );
+                                    _mm256_add_epi64( in[0], inout[0] ) );
        state1 = _mm256_xor_si256( state1,
-                                  _mm256_add_epi64( in[1], inout[1] ) );
+                                    _mm256_add_epi64( in[1], inout[1] ) );
        state2 = _mm256_xor_si256( state2,
-                                  _mm256_add_epi64( in[2], inout[2] ) );
+                                    _mm256_add_epi64( in[2], inout[2] ) );
 
        LYRA_ROUND_AVX2( state0, state1, state2, state3 );
 
@@ -664,8 +664,8 @@ inline void reducedDuplexRowSetup( uint64_t *State, uint64_t *rowIn,
                                     _mm256_blend_epi32( t2, t1, 0x03 ) );
 
        //Inputs: next column (i.e., next block in sequence)
-       in    += BLOCK_LEN_M256I;
        inout += BLOCK_LEN_M256I;
+       in    += BLOCK_LEN_M256I;
        //Output: goes to previous column
        out   -= BLOCK_LEN_M256I;
     }
@@ -677,7 +677,11 @@ inline void reducedDuplexRowSetup( uint64_t *State, uint64_t *rowIn,
 
 #elif defined (__AVX__)
 
-    __m128i* in    = (__m128i*)rowIn;
+    uint64_t* ptrWordIn = rowIn;        //In Lyra2: pointer to prev
+    uint64_t* ptrWordInOut = rowInOut;  //In Lyra2: pointer to row*
+    uint64_t* ptrWordOut = rowOut + (nCols-1)*BLOCK_LEN_INT64; //In Lyra2: pointer to row
+
+    __m128i*  in   = (__m128i*)rowIn;
     __m128i* inout = (__m128i*)rowInOut;
     __m128i* out   = (__m128i*)rowOut + ( (nCols-1) * BLOCK_LEN_M128I );
 
@@ -685,27 +689,24 @@ inline void reducedDuplexRowSetup( uint64_t *State, uint64_t *rowIn,
     {
         _mm_prefetch( in    + i,     _MM_HINT_T0 );
         _mm_prefetch( in    + i + 2, _MM_HINT_T0 );
-        _mm_prefetch( inout + i,     _MM_HINT_T0 );
-        _mm_prefetch( inout + i + 2, _MM_HINT_T0 );
         _mm_prefetch( out   - i,     _MM_HINT_T0 );
         _mm_prefetch( out   - i - 2, _MM_HINT_T0 );
+        _mm_prefetch( inout + i,     _MM_HINT_T0 );
+        _mm_prefetch( inout + i + 2, _MM_HINT_T0 );
     }
 
     __m128i* state = (__m128i*)State;
 
-    // For the last round in this function not optimized for AVX
-    uint64_t* ptrWordIn = rowIn;        //In Lyra2: pointer to prev
-    uint64_t* ptrWordInOut = rowInOut;  //In Lyra2: pointer to row*
-    uint64_t* ptrWordOut = rowOut + (nCols-1)*BLOCK_LEN_INT64; //In Lyra2: pointer to row
+//    __m128i t0h, t0l, t1h, t1l, t2h, t2l;
 
     for ( i = 0; i < nCols; i++ )
     {
        _mm_prefetch( in    + 6, _MM_HINT_T0 );
        _mm_prefetch( in    + 7, _MM_HINT_T0 );
-       _mm_prefetch( inout + 6, _MM_HINT_T0 );
-       _mm_prefetch( inout + 7, _MM_HINT_T0 );
        _mm_prefetch( out   - 6, _MM_HINT_T0 );
        _mm_prefetch( out   - 7, _MM_HINT_T0 );
+       _mm_prefetch( inout + 6, _MM_HINT_T0 );
+       _mm_prefetch( inout + 7, _MM_HINT_T0 );
 
         state[0] = _mm_xor_si128( state[0],
                                   _mm_add_epi64( in[0], inout[0] ) );
@@ -842,16 +843,9 @@ inline void reducedDuplexRow( uint64_t *State, uint64_t *rowIn,
 
 #if defined __AVX2__
 
-   __m256i* state = (__m256i*)State;
-   __m256i  state0 = _mm256_load_si256(  state    );
-   __m256i  state1 = _mm256_load_si256( &state[1] );
-   __m256i  state2 = _mm256_load_si256( &state[2] );
-   __m256i  state3 = _mm256_load_si256( &state[3] );
-
    __m256i* in    = (__m256i*)rowIn;
    __m256i* inout = (__m256i*)rowInOut;
    __m256i* out   = (__m256i*)rowOut;
-   __m256i  t0, t1, t2;
 
    for ( i = 0; i < 9; i += 3)
    {
@@ -862,6 +856,14 @@ inline void reducedDuplexRow( uint64_t *State, uint64_t *rowIn,
        _mm_prefetch( inout + i,     _MM_HINT_T0 );
        _mm_prefetch( inout + i + 2, _MM_HINT_T0 );
    }
+
+   __m256i* state = (__m256i*)State;
+   __m256i  state0 = _mm256_load_si256(  state    );
+   __m256i  state1 = _mm256_load_si256( &state[1] );
+   __m256i  state2 = _mm256_load_si256( &state[2] );
+   __m256i  state3 = _mm256_load_si256( &state[3] );
+
+   __m256i  t0, t1, t2;
 
    for ( i = 0; i < nCols; i++ )
    {
@@ -901,9 +903,10 @@ inline void reducedDuplexRow( uint64_t *State, uint64_t *rowIn,
                                    _mm256_blend_epi32( t2, t1, 0x03 ) );
 
        //Goes to next block
-       in    += BLOCK_LEN_M256I;
        out   += BLOCK_LEN_M256I;
        inout += BLOCK_LEN_M256I;
+       in    += BLOCK_LEN_M256I;
+
    }
 
    _mm256_store_si256( state,     state0 );
@@ -912,6 +915,10 @@ inline void reducedDuplexRow( uint64_t *State, uint64_t *rowIn,
    _mm256_store_si256( &state[3], state3 );
 
 #elif defined __AVX__
+
+    uint64_t* ptrWordInOut = rowInOut; //In Lyra2: pointer to row*
+    uint64_t* ptrWordIn = rowIn; //In Lyra2: pointer to prev
+    uint64_t* ptrWordOut = rowOut; //In Lyra2: pointer to row
 
     __m128i* state = (__m128i*)State;
     __m128i* in    = (__m128i*)rowIn;
@@ -927,11 +934,6 @@ inline void reducedDuplexRow( uint64_t *State, uint64_t *rowIn,
         _mm_prefetch( inout + i,     _MM_HINT_T0 );
         _mm_prefetch( inout + i + 2, _MM_HINT_T0 );
     }
-
-    // for the last round in this function that isn't optimized for AVX
-    uint64_t* ptrWordInOut = rowInOut; //In Lyra2: pointer to row*
-    uint64_t* ptrWordIn = rowIn; //In Lyra2: pointer to prev
-    uint64_t* ptrWordOut = rowOut; //In Lyra2: pointer to row
 
     for ( i = 0; i < nCols; i++)
     {
