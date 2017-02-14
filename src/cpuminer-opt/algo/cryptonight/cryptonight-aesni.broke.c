@@ -102,6 +102,7 @@ typedef struct
     uint64_t a[AES_BLOCK_SIZE >> 3] __attribute__((aligned(64)));
     uint64_t b[AES_BLOCK_SIZE >> 3] __attribute__((aligned(64)));
     uint8_t c[AES_BLOCK_SIZE] __attribute__((aligned(64)));
+//    oaes_ctx* aes_ctx;
 } cryptonight_ctx;
 
 static __thread cryptonight_ctx ctx;
@@ -117,10 +118,13 @@ void cryptonight_hash_aes( void *restrict output, const void *input, int len )
     memcpy(ExpandedKey, ctx.state.hs.b, AES_KEY_SIZE);
     ExpandAESKey256(ExpandedKey);
     
+    const int MEMORY_M128I    = MEMORY >> 3; // 2MiB / 8 = 256k
+    const int INIT_SIZE_M128I = INIT_SIZE_BYTE i>> 4;
+ 
     __m128i *longoutput, *expkey, *xmminput;
-    longoutput = (__m128i *)ctx.long_state;
-    expkey     = (__m128i *)ExpandedKey;
-    xmminput   = (__m128i *)ctx.text;
+	longoutput = (__m128i *)ctx.long_state;
+	expkey = (__m128i *)ExpandedKey;
+	xmminput = (__m128i *)ctx.text;
     
     //for (i = 0; likely(i < MEMORY); i += INIT_SIZE_BYTE)
     //    aesni_parallel_noxor(&ctx->long_state[i], ctx->text, ExpandedKey);
@@ -128,23 +132,22 @@ void cryptonight_hash_aes( void *restrict output, const void *input, int len )
     // prefetch expkey, all of xmminput and enough longoutput for 4 loops
     _mm_prefetch( expkey,       _MM_HINT_T0 );
     _mm_prefetch( expkey   + 4, _MM_HINT_T0 );
-    _mm_prefetch( expkey   + 8, _MM_HINT_T0 );
     _mm_prefetch( xmminput,     _MM_HINT_T0 );
     _mm_prefetch( xmminput + 4, _MM_HINT_T0 );
 
-    for ( i = 0; i < 64; i += 8 )
+    for ( i = 0; i < 64; i += 4*INIT_SIZE_M128I )
     {
-       _mm_prefetch( longoutput + i,      _MM_HINT_T0 );
-       _mm_prefetch( longoutput + i +  4, _MM_HINT_T0 );
-       _mm_prefetch( longoutput + i +  8, _MM_HINT_T0 );
-       _mm_prefetch( longoutput + i + 12, _MM_HINT_T0 );
+       // multiply i(byte) by 8 to get _m128i index
+       _mm_prefetch( longoutput + i,                      _MM_HINT_T0 );
+       _mm_prefetch( longoutput + i +  2*INIT_SIZE_M128I, _MM_HINT_T0 );
+       _mm_prefetch( longoutput + i +  3*INIT_SIZE_M128I, _MM_HINT_T0 );
+       _mm_prefetch( longoutput + i +  4*INIT_SIZE_M128I, _MM_HINT_T0 );
     }
 
     for ( i = 0; likely( i < MEMORY_M128I ); i += INIT_SIZE_M128I )
     {
-        // prefetch 4 loops ahead,
-        _mm_prefetch( longoutput + i + 64, _MM_HINT_T0 );
-        _mm_prefetch( longoutput + i + 68, _MM_HINT_T0 );
+        // stay 4 loops ahead,
+        _mm_prefetch( longoutput + i + 64*INIT_SIZE_M128I, _MM_HINT_T0 );
 
 	for (j = 0; j < 10; j++ )
 	{
@@ -190,14 +193,13 @@ void cryptonight_hash_aes( void *restrict output, const void *input, int len )
 	
     for(i = 0; __builtin_expect(i < 0x80000, 1); i++)
     {	  
-        uint64_t c[2];
-        _mm_prefetch( &ctx.long_state[c[0] & 0x1FFFF0], _MM_HINT_T0 );
-
-	__m128i c_x = _mm_load_si128( 
-                              (__m128i *)&ctx.long_state[a[0] & 0x1FFFF0]);
+	__m128i c_x = _mm_load_si128((__m128i *)&ctx.long_state[a[0] & 0x1FFFF0]);
 	__m128i a_x = _mm_load_si128((__m128i *)a);
+	uint64_t c[2];
 	c_x = _mm_aesenc_si128(c_x, a_x);
+
 	_mm_store_si128((__m128i *)c, c_x);
+	__builtin_prefetch(&ctx.long_state[c[0] & 0x1FFFF0], 0, 1);
 	
 	b_x = _mm_xor_si128(b_x, c_x);
 	_mm_store_si128((__m128i *)&ctx.long_state[a[0] & 0x1FFFF0], b_x);
@@ -222,9 +224,8 @@ void cryptonight_hash_aes( void *restrict output, const void *input, int len )
 	  a[1] += lo;
 	}
 	uint64_t *dst = (uint64_t*)&ctx.long_state[c[0] & 0x1FFFF0];
-//        __m128i *dst = (__m128i*)&ctx.long_state[c[0] & 0x1FFFF0];
 
-//        *dst = cast_m128i( a ); 
+//        cast_m128i( dst ) = cast_m128i( a ); 
 	dst[0] = a[0];
 	dst[1] = a[1];
 
@@ -232,7 +233,7 @@ void cryptonight_hash_aes( void *restrict output, const void *input, int len )
 	a[0] ^= b[0];
 	a[1] ^= b[1];
 	b_x = c_x;
-	_mm_prefetch( &ctx.long_state[a[0] & 0x1FFFF0], _MM_HINT_T0 );
+	__builtin_prefetch(&ctx.long_state[a[0] & 0x1FFFF0], 0, 3);
     }
 
     memcpy( ctx.text, ctx.state.init, INIT_SIZE_BYTE );
@@ -243,24 +244,23 @@ void cryptonight_hash_aes( void *restrict output, const void *input, int len )
     //    aesni_parallel_xor(&ctx->text, ExpandedKey, &ctx->long_state[i]);
     
     // prefetch expkey, all of xmminput and enough longoutput for 4 loops
-    _mm_prefetch( xmminput,     _MM_HINT_T0 );
-    _mm_prefetch( xmminput + 4, _MM_HINT_T0 );
-    for ( i = 0; i < 64; i += 16 )
+    _mm_prefetch( xmminput,                   _MM_HINT_T0 );
+    _mm_prefetch( xmminput + INIT_SIZE_M128I, _MM_HINT_T0 );
+    for ( i = 0; i < 64; i += 4*INIT_SIZE_M128I )
     {
-       _mm_prefetch( longoutput + i,      _MM_HINT_T0 );
-       _mm_prefetch( longoutput + i +  4, _MM_HINT_T0 );
-       _mm_prefetch( longoutput + i +  8, _MM_HINT_T0 );
-       _mm_prefetch( longoutput + i + 12, _MM_HINT_T0 );
+       // multiply i(byte) by 8 to get _m128i index
+       _mm_prefetch( longoutput + i,                     _MM_HINT_T0 );
+       _mm_prefetch( longoutput + i +   INIT_SIZE_M128I, _MM_HINT_T0 );
+       _mm_prefetch( longoutput + i + 2*INIT_SIZE_M128I, _MM_HINT_T0 );
+       _mm_prefetch( longoutput + i + 3*INIT_SIZE_M128I, _MM_HINT_T0 );
     }
-    _mm_prefetch( expkey,     _MM_HINT_T0 );
-    _mm_prefetch( expkey + 4, _MM_HINT_T0 );
-    _mm_prefetch( expkey + 8, _MM_HINT_T0 );
+    _mm_prefetch( expkey,                     _MM_HINT_T0 );
+    _mm_prefetch( expkey   + INIT_SIZE_M128I, _MM_HINT_T0 );
 
     for ( i = 0; likely( i < MEMORY_M128I ); i += INIT_SIZE_M128I )
     {
         // stay 4 loops ahead,
-        _mm_prefetch( longoutput + i + 64, _MM_HINT_T0 );
-        _mm_prefetch( longoutput + i + 68, _MM_HINT_T0 );
+        _mm_prefetch( longoutput + i + 64*INIT_SIZE_M128I, _MM_HINT_T0 );
 
         xmminput[0] = _mm_xor_si128( longoutput[i  ], xmminput[0] );
         xmminput[1] = _mm_xor_si128( longoutput[i+1], xmminput[1] );
