@@ -1,0 +1,311 @@
+==20686== Memcheck, a memory error detector
+==20686== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al.
+==20686== Using Valgrind-3.10.1 and LibVEX; rerun with -h for copyright info
+==20686== Command: ./cpuminer -a hmq1725 -o stratum+tcp://boat.suprnova.cc:4156 -u joblo.23c -p x -t 1
+==20686== Parent PID: 3627
+==20686== 
+--20686-- 
+--20686-- Valgrind options:
+--20686--    --leak-check=full
+--20686--    -v
+--20686--    --log-file=report.log
+--20686-- Contents of /proc/version:
+--20686--   Linux version 3.19.0-32-generic (buildd@lgw01-43) (gcc version 4.8.2 (Ubuntu 4.8.2-19ubuntu1) ) #37~14.04.1-Ubuntu SMP Thu Oct 22 09:41:40 UTC 2015
+--20686-- Arch and hwcaps: AMD64, LittleEndian, amd64-cx16-lzcnt-rdtscp-sse3-avx-avx2-bmi
+--20686-- Page sizes: currently 4096, max supported 4096
+--20686-- Valgrind library directory: /usr/lib/valgrind
+--20686-- Reading syms from /home/coin/devel/cpuminer/cpuminer/3.5.9/cpuminer-opt-3.5.9-dev/cpuminer
+--20686-- Reading syms from /lib/x86_64-linux-gnu/ld-2.19.so
+--20686--   Considering /lib/x86_64-linux-gnu/ld-2.19.so ..
+--20686--   .. CRC mismatch (computed 4cbae35e wanted 8d683c31)
+--20686--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/ld-2.19.so ..
+--20686--   .. CRC is valid
+--20686-- Reading syms from /usr/lib/valgrind/memcheck-amd64-linux
+--20686--   Considering /usr/lib/valgrind/memcheck-amd64-linux ..
+--20686--   .. CRC mismatch (computed 4f1eed43 wanted a323a3ab)
+--20686--    object doesn't have a symbol table
+--20686--    object doesn't have a dynamic symbol table
+--20686-- Scheduler: using generic scheduler lock implementation.
+--20686-- Reading suppressions file: /usr/lib/valgrind/default.supp
+==20686== embedded gdbserver: reading from /tmp/vgdb-pipe-from-vgdb-to-20686-by-coin-on-???
+==20686== embedded gdbserver: writing to   /tmp/vgdb-pipe-to-vgdb-from-20686-by-coin-on-???
+==20686== embedded gdbserver: shared mem   /tmp/vgdb-pipe-shared-mem-vgdb-20686-by-coin-on-???
+==20686== 
+==20686== TO CONTROL THIS PROCESS USING vgdb (which you probably
+==20686== don't want to do, unless you know exactly what you're doing,
+==20686== or are doing some strange experiment):
+==20686==   /usr/lib/valgrind/../../bin/vgdb --pid=20686 ...command...
+==20686== 
+==20686== TO DEBUG THIS PROCESS USING GDB: start GDB like this
+==20686==   /path/to/gdb ./cpuminer
+==20686== and then give GDB the following command
+==20686==   target remote | /usr/lib/valgrind/../../bin/vgdb --pid=20686
+==20686== --pid is optional if only one valgrind process is running
+==20686== 
+--20686-- REDIR: 0x4019ca0 (ld-linux-x86-64.so.2:strlen) redirected to 0x380764b1 (???)
+--20686-- Reading syms from /usr/lib/valgrind/vgpreload_core-amd64-linux.so
+--20686--   Considering /usr/lib/valgrind/vgpreload_core-amd64-linux.so ..
+--20686--   .. CRC mismatch (computed fc68135e wanted 45f5e986)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so
+--20686--   Considering /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so ..
+--20686--   .. CRC mismatch (computed ae683f7e wanted 08c06df2)
+--20686--    object doesn't have a symbol table
+==20686== WARNING: new redirection conflicts with existing -- ignoring it
+--20686--     old: 0x04019ca0 (strlen              ) R-> (0000.0) 0x380764b1 ???
+--20686--     new: 0x04019ca0 (strlen              ) R-> (2007.0) 0x04c2e1a0 strlen
+--20686-- REDIR: 0x4019a50 (ld-linux-x86-64.so.2:index) redirected to 0x4c2dd50 (index)
+--20686-- REDIR: 0x4019c70 (ld-linux-x86-64.so.2:strcmp) redirected to 0x4c2f2f0 (strcmp)
+--20686-- REDIR: 0x401a9c0 (ld-linux-x86-64.so.2:mempcpy) redirected to 0x4c31da0 (mempcpy)
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libcurl-gnutls.so.4.3.0
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libpthread-2.19.so
+--20686--   Considering /lib/x86_64-linux-gnu/libpthread-2.19.so ..
+--20686--   .. CRC mismatch (computed d568bf33 wanted fb00d679)
+--20686--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libpthread-2.19.so ..
+--20686--   .. CRC is valid
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libcrypto.so.1.0.0
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libgmp.so.10.1.3
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.19 ..
+--20686--   .. CRC mismatch (computed 5ce96d3c wanted bf86fabd)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libm-2.19.so
+--20686--   Considering /lib/x86_64-linux-gnu/libm-2.19.so ..
+--20686--   .. CRC mismatch (computed a46ef660 wanted 767bfa33)
+--20686--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libm-2.19.so ..
+--20686--   .. CRC is valid
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libgcc_s.so.1
+--20686--   Considering /lib/x86_64-linux-gnu/libgcc_s.so.1 ..
+--20686--   .. CRC mismatch (computed 6116126e wanted 54e3f1f2)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libc-2.19.so
+--20686--   Considering /lib/x86_64-linux-gnu/libc-2.19.so ..
+--20686--   .. CRC mismatch (computed dc620abc wanted 148cbd6e)
+--20686--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libc-2.19.so ..
+--20686--   .. CRC is valid
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libidn.so.11.6.11
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libidn.so.11.6.11 ..
+--20686--   .. CRC mismatch (computed 0e88c96f wanted 634ebbd2)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/librtmp.so.0
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libgcrypt.so.11.8.2
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libgnutls.so.26.22.6
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libgssapi_krb5.so.2.2
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libgssapi_krb5.so.2.2 ..
+--20686--   .. CRC mismatch (computed 51afa55f wanted ca60f159)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/liblber-2.4.so.2.8.3
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libldap_r-2.4.so.2.8.3
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libz.so.1.2.8
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libdl-2.19.so
+--20686--   Considering /lib/x86_64-linux-gnu/libdl-2.19.so ..
+--20686--   .. CRC mismatch (computed c1315e8c wanted 37097b60)
+--20686--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libdl-2.19.so ..
+--20686--   .. CRC is valid
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libgpg-error.so.0.10.0
+--20686--   Considering /lib/x86_64-linux-gnu/libgpg-error.so.0.10.0 ..
+--20686--   .. CRC mismatch (computed fe28a920 wanted 24f96a1d)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libtasn1.so.6.2.0
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libp11-kit.so.0.0.0
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libkrb5.so.3.3
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libkrb5.so.3.3 ..
+--20686--   .. CRC mismatch (computed f4d91fd3 wanted 05c5869e)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libk5crypto.so.3.1
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libk5crypto.so.3.1 ..
+--20686--   .. CRC mismatch (computed 21fe119a wanted 29aba515)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libcom_err.so.2.1
+--20686--   Considering /lib/x86_64-linux-gnu/libcom_err.so.2.1 ..
+--20686--   .. CRC mismatch (computed 84215f36 wanted e9204bea)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libkrb5support.so.0.1
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libkrb5support.so.0.1 ..
+--20686--   .. CRC mismatch (computed 6e8093c7 wanted fc0a23da)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libresolv-2.19.so
+--20686--   Considering /lib/x86_64-linux-gnu/libresolv-2.19.so ..
+--20686--   .. CRC mismatch (computed e64430c6 wanted 28c4e8db)
+--20686--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libresolv-2.19.so ..
+--20686--   .. CRC is valid
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libsasl2.so.2.0.25
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libgssapi.so.3.0.0
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libgssapi.so.3.0.0 ..
+--20686--   .. CRC mismatch (computed ee8b766c wanted e8734279)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libffi.so.6.0.1
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libffi.so.6.0.1 ..
+--20686--   .. CRC mismatch (computed ffa3f758 wanted a40db115)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libkeyutils.so.1.4
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libheimntlm.so.0.1.0
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libheimntlm.so.0.1.0 ..
+--20686--   .. CRC mismatch (computed 2353810d wanted 47e8fd48)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libkrb5.so.26.0.0
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libkrb5.so.26.0.0 ..
+--20686--   .. CRC mismatch (computed 75248ef1 wanted 31254dd2)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libasn1.so.8.0.0
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libasn1.so.8.0.0 ..
+--20686--   .. CRC mismatch (computed a0c5b428 wanted 2f61f559)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libhcrypto.so.4.1.0
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libhcrypto.so.4.1.0 ..
+--20686--   .. CRC mismatch (computed ff65067d wanted 671fca0a)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libroken.so.18.1.0
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libroken.so.18.1.0 ..
+--20686--   .. CRC mismatch (computed 05da61a4 wanted 6ea449f8)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libwind.so.0.0.0
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libwind.so.0.0.0 ..
+--20686--   .. CRC mismatch (computed 9a4f79ee wanted 31e2ff9c)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libheimbase.so.1.0.0
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libheimbase.so.1.0.0 ..
+--20686--   .. CRC mismatch (computed 497a07cc wanted a4abd051)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libhx509.so.5.0.0
+--20686--   Considering /usr/lib/x86_64-linux-gnu/libhx509.so.5.0.0 ..
+--20686--   .. CRC mismatch (computed 68385c7f wanted f1071282)
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /usr/lib/x86_64-linux-gnu/libsqlite3.so.0.8.6
+--20686--    object doesn't have a symbol table
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libcrypt-2.19.so
+--20686--   Considering /lib/x86_64-linux-gnu/libcrypt-2.19.so ..
+--20686--   .. CRC mismatch (computed 9558285e wanted ec70842c)
+--20686--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libcrypt-2.19.so ..
+--20686--   .. CRC is valid
+--20686-- REDIR: 0x61b2d60 (libc.so.6:strcasecmp) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61b5050 (libc.so.6:strncasecmp) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61b2530 (libc.so.6:memcpy@GLIBC_2.2.5) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61aeee0 (libc.so.6:strncmp) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61b1f60 (libc.so.6:bcmp) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61ad070 (libc.so.6:strcmp) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x622ea60 (libc.so.6:__memcpy_chk) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61b7730 (libc.so.6:memcpy@@GLIBC_2.14) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61b0780 (libc.so.6:strncpy) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61ae500 (libc.so.6:strcpy) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61ace20 (libc.so.6:index) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61aeea0 (libc.so.6:strncat) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61b0e40 (libc.so.6:strspn) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61acc20 (libc.so.6:strcat) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x622eab0 (libc.so.6:__memmove_chk) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61b0ab0 (libc.so.6:strpbrk) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61b19d0 (libc.so.6:strstr) redirected to 0x4a25720 (_vgnU_ifunc_wrapper)
+--20686-- REDIR: 0x61b07c0 (libc.so.6:rindex) redirected to 0x4c2da30 (rindex)
+--20686-- REDIR: 0x61aeac0 (libc.so.6:strlen) redirected to 0x4c2e0e0 (strlen)
+--20686-- REDIR: 0x61a8750 (libc.so.6:malloc) redirected to 0x4c2ab10 (malloc)
+--20686-- REDIR: 0x61b7780 (libc.so.6:__GI_memcpy) redirected to 0x4c2fc90 (__GI_memcpy)
+--20686-- REDIR: 0x61ad0b0 (libc.so.6:__GI_strcmp) redirected to 0x4c2f200 (__GI_strcmp)
+--20686-- REDIR: 0x61b1fa0 (libc.so.6:__GI_memcmp) redirected to 0x4c30b80 (__GI_memcmp)
+--20686-- REDIR: 0x6266200 (libc.so.6:__strcmp_ssse3) redirected to 0x4c2f1b0 (strcmp)
+--20686-- REDIR: 0x61a9220 (libc.so.6:calloc) redirected to 0x4c2cbf0 (calloc)
+--20686-- REDIR: 0x61b23a0 (libc.so.6:__GI_memmove) redirected to 0x4c31660 (__GI_memmove)
+--20686-- REDIR: 0x61a8df0 (libc.so.6:free) redirected to 0x4c2bd80 (free)
+--20686-- REDIR: 0x61ace50 (libc.so.6:__GI_strchr) redirected to 0x4c2db90 (__GI_strchr)
+--20686-- REDIR: 0x62631e0 (libc.so.6:__strcasecmp_avx) redirected to 0x4c2ea80 (strcasecmp)
+--20686-- REDIR: 0x6264850 (libc.so.6:__strncasecmp_avx) redirected to 0x4c2eb60 (strncasecmp)
+--20686-- REDIR: 0x61c7230 (libc.so.6:__strstr_sse2_unaligned) redirected to 0x4c31fa0 (strstr)
+--20686-- REDIR: 0x61c2b90 (libc.so.6:__strcpy_sse2_unaligned) redirected to 0x4c2e1c0 (strcpy)
+--20686-- REDIR: 0x61b9ac0 (libc.so.6:strchrnul) redirected to 0x4c319b0 (strchrnul)
+--20686-- REDIR: 0x6267460 (libc.so.6:__strncmp_ssse3) redirected to 0x4c2e8c0 (strncmp)
+--20686-- REDIR: 0xffffffffff600400 (???:???) redirected to 0x3807649d (???)
+--20686-- REDIR: 0x61b1410 (libc.so.6:__GI_strstr) redirected to 0x4c32030 (__strstr_sse2)
+--20686-- REDIR: 0x61ae540 (libc.so.6:__GI_strcpy) redirected to 0x4c2e2a0 (__GI_strcpy)
+--20686-- REDIR: 0x61b98b0 (libc.so.6:rawmemchr) redirected to 0x4c319f0 (rawmemchr)
+--20686-- REDIR: 0x61bdfd0 (libc.so.6:__memcpy_sse2_unaligned) redirected to 0x4c2f6b0 (memcpy@@GLIBC_2.14)
+--20686-- REDIR: 0x61aef30 (libc.so.6:__GI_strncmp) redirected to 0x4c2e930 (__GI_strncmp)
+--20686-- REDIR: 0x61b1c10 (libc.so.6:memchr) redirected to 0x4c2f390 (memchr)
+--20686-- REDIR: 0x61b2bf0 (libc.so.6:__GI_stpcpy) redirected to 0x4c30da0 (__GI_stpcpy)
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libnss_files-2.19.so
+--20686--   Considering /lib/x86_64-linux-gnu/libnss_files-2.19.so ..
+--20686--   .. CRC mismatch (computed 76d67c28 wanted 59ea999f)
+--20686--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libnss_files-2.19.so ..
+--20686--   .. CRC is valid
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libnss_mdns4_minimal.so.2
+--20686--    object doesn't have a symbol table
+--20686-- REDIR: 0x401ab10 (ld-linux-x86-64.so.2:stpcpy) redirected to 0x4c31120 (stpcpy)
+--20686-- Reading syms from /lib/x86_64-linux-gnu/libnss_dns-2.19.so
+--20686--   Considering /lib/x86_64-linux-gnu/libnss_dns-2.19.so ..
+--20686--   .. CRC mismatch (computed 995b069c wanted 3ca0d76e)
+--20686--   Considering /usr/lib/debug/lib/x86_64-linux-gnu/libnss_dns-2.19.so ..
+--20686--   .. CRC is valid
+--20686-- REDIR: 0xffffffffff600000 (???:???) redirected to 0x38076493 (???)
+--20686-- REDIR: 0x6270ae0 (libc.so.6:__memcpy_chk_ssse3_back) redirected to 0x4c31e90 (__memcpy_chk)
+--20686-- REDIR: 0x6276090 (libc.so.6:__memmove_ssse3_back) redirected to 0x4c2f450 (memcpy@GLIBC_2.2.5)
+--20686-- REDIR: 0x61a8ef0 (libc.so.6:realloc) redirected to 0x4c2ce10 (realloc)
+--20686-- REDIR: 0x61b25c0 (libc.so.6:memset) redirected to 0x4c31350 (memset)
+--20686-- REDIR: 0x6286060 (libc.so.6:__memcmp_sse4_1) redirected to 0x4c30c00 (__memcmp_sse4_1)
+--20686-- Discarding syms at 0xdc162a0-0xdc1cf63 in /lib/x86_64-linux-gnu/libnss_files-2.19.so due to munmap()
+--20686-- Discarding syms at 0xde20c10-0xde2180f in /lib/x86_64-linux-gnu/libnss_mdns4_minimal.so.2 due to munmap()
+--20686-- Discarding syms at 0xe024100-0xe0274a8 in /lib/x86_64-linux-gnu/libnss_dns-2.19.so due to munmap()
+==20686== 
+==20686== HEAP SUMMARY:
+==20686==     in use at exit: 134,603 bytes in 88 blocks
+==20686==   total heap usage: 472 allocs, 384 frees, 194,839 bytes allocated
+==20686== 
+==20686== Searching for pointers to 88 not-freed blocks
+==20686== Checked 40,806,984 bytes
+==20686== 
+==20686== 320 bytes in 1 blocks are possibly lost in loss record 69 of 80
+==20686==    at 0x4C2CC70: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==20686==    by 0x4012E54: allocate_dtv (dl-tls.c:296)
+==20686==    by 0x4012E54: _dl_allocate_tls (dl-tls.c:460)
+==20686==    by 0x50A1DA0: allocate_stack (allocatestack.c:589)
+==20686==    by 0x50A1DA0: pthread_create@@GLIBC_2.2.5 (pthread_create.c:500)
+==20686==    by 0x406CE7: thread_create (in /home/coin/devel/cpuminer/cpuminer/3.5.9/cpuminer-opt-3.5.9-dev/cpuminer)
+==20686==    by 0x405994: main (in /home/coin/devel/cpuminer/cpuminer/3.5.9/cpuminer-opt-3.5.9-dev/cpuminer)
+==20686== 
+==20686== 320 bytes in 1 blocks are possibly lost in loss record 70 of 80
+==20686==    at 0x4C2CC70: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==20686==    by 0x4012E54: allocate_dtv (dl-tls.c:296)
+==20686==    by 0x4012E54: _dl_allocate_tls (dl-tls.c:460)
+==20686==    by 0x50A1DA0: allocate_stack (allocatestack.c:589)
+==20686==    by 0x50A1DA0: pthread_create@@GLIBC_2.2.5 (pthread_create.c:500)
+==20686==    by 0x406CE7: thread_create (in /home/coin/devel/cpuminer/cpuminer/3.5.9/cpuminer-opt-3.5.9-dev/cpuminer)
+==20686==    by 0x405BCD: main (in /home/coin/devel/cpuminer/cpuminer/3.5.9/cpuminer-opt-3.5.9-dev/cpuminer)
+==20686== 
+==20686== 320 bytes in 1 blocks are possibly lost in loss record 71 of 80
+==20686==    at 0x4C2CC70: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==20686==    by 0x4012E54: allocate_dtv (dl-tls.c:296)
+==20686==    by 0x4012E54: _dl_allocate_tls (dl-tls.c:460)
+==20686==    by 0x50A1DA0: allocate_stack (allocatestack.c:589)
+==20686==    by 0x50A1DA0: pthread_create@@GLIBC_2.2.5 (pthread_create.c:500)
+==20686==    by 0x406CE7: thread_create (in /home/coin/devel/cpuminer/cpuminer/3.5.9/cpuminer-opt-3.5.9-dev/cpuminer)
+==20686==    by 0x405CD4: main (in /home/coin/devel/cpuminer/cpuminer/3.5.9/cpuminer-opt-3.5.9-dev/cpuminer)
+==20686== 
+==20686== 320 bytes in 1 blocks are possibly lost in loss record 72 of 80
+==20686==    at 0x4C2CC70: calloc (in /usr/lib/valgrind/vgpreload_memcheck-amd64-linux.so)
+==20686==    by 0x4012E54: allocate_dtv (dl-tls.c:296)
+==20686==    by 0x4012E54: _dl_allocate_tls (dl-tls.c:460)
+==20686==    by 0x50A1DA0: allocate_stack (allocatestack.c:589)
+==20686==    by 0x50A1DA0: pthread_create@@GLIBC_2.2.5 (pthread_create.c:500)
+==20686==    by 0x4059FF: main (in /home/coin/devel/cpuminer/cpuminer/3.5.9/cpuminer-opt-3.5.9-dev/cpuminer)
+==20686== 
+==20686== LEAK SUMMARY:
+==20686==    definitely lost: 0 bytes in 0 blocks
+==20686==    indirectly lost: 0 bytes in 0 blocks
+==20686==      possibly lost: 1,280 bytes in 4 blocks
+==20686==    still reachable: 133,323 bytes in 84 blocks
+==20686==         suppressed: 0 bytes in 0 blocks
+==20686== Reachable blocks (those to which a pointer was found) are not shown.
+==20686== To see them, rerun with: --leak-check=full --show-leak-kinds=all
+==20686== 
+==20686== ERROR SUMMARY: 4 errors from 4 contexts (suppressed: 0 from 0)
+==20686== ERROR SUMMARY: 4 errors from 4 contexts (suppressed: 0 from 0)
