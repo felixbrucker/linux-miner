@@ -98,17 +98,12 @@ void null_hash_suw()
 {
   applog(LOG_WARNING,"SWERR: null_hash_suw unsafe null function");
 };
-void null_hash_alt()
-{
-  applog(LOG_WARNING,"SWERR: null_hash_alt unsafe null function");
-};
 
 void init_algo_gate( algo_gate_t* gate )
 {
    gate->miner_thread_init       = (void*)&return_true;
    gate->scanhash                = (void*)&null_scanhash;
    gate->hash                    = (void*)&null_hash;
-   gate->hash_alt                = (void*)&null_hash_alt;
    gate->hash_suw                = (void*)&null_hash_suw;
    gate->get_new_work            = (void*)&std_get_new_work;
    gate->get_nonceptr            = (void*)&std_get_nonceptr;
@@ -119,11 +114,11 @@ void init_algo_gate( algo_gate_t* gate )
    gate->stratum_gen_work        = (void*)&std_stratum_gen_work;
    gate->build_stratum_request   = (void*)&std_le_build_stratum_request;
    gate->set_target              = (void*)&std_set_target;
+   gate->work_decode             = (void*)&std_work_decode;
    gate->submit_getwork_result   = (void*)&std_submit_getwork_result;
    gate->build_extraheader       = (void*)&std_build_extraheader;
    gate->set_work_data_endian    = (void*)&do_nothing;
    gate->calc_network_diff       = (void*)&std_calc_network_diff;
-//   gate->prevent_dupes           = (void*)&return_false;
    gate->ready_to_mine           = (void*)&std_ready_to_mine;
    gate->resync_threads          = (void*)&do_nothing;
    gate->do_this_thread          = (void*)&return_true;
@@ -244,6 +239,7 @@ bool register_json_rpc2( algo_gate_t *gate )
   gate->nonce_index             = JR2_NONCE_INDEX;
   jsonrpc_2 = true;   // still needed
   opt_extranonce = false;
+  have_gbt = false;
   return true;
  }
 
@@ -262,7 +258,7 @@ void exec_hash_function( int algo, void *output, const void *pdata )
 #define ALIAS  (0)
 
 // The only difference between the alias and the proper algo name is the
-// proper name s the one that is defined in ALGO_NAMES, there may be
+// proper name is the one that is defined in ALGO_NAMES, there may be
 // multiple aliases that map to the same proper name.
 // New aliases can be added anywhere in the array as long as NULL is last.
 // Alphabetic order of alias is recommended.
@@ -273,6 +269,7 @@ const char* const algo_alias_map[][2] =
   { "blake256r8vnl",     "vanilla"     },
   { "sia",               "blake2b"     },
   { "blake256r14",       "blake"       },
+  { "blake256r14dcr",    "decred"      },
   { "cryptonote",        "cryptonight" },
   { "cryptonight-light", "cryptolight" },
   { "dmd-gr",            "groestl"     },
