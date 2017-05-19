@@ -323,7 +323,8 @@ double hash_target_ratio( uint32_t* hash, uint32_t* target );
 void   work_set_target_ratio( struct work* work, uint32_t* hash );
 
 void   get_currentalgo( char* buf, int sz );
-bool   has_aes_ni( void );
+bool   has_sha();
+bool   has_aes_ni();
 bool   has_avx1();
 bool   has_avx2();
 bool   has_sse2();
@@ -487,12 +488,14 @@ enum algos {
         ALGO_CRYPTONIGHT, 
         ALGO_DECRED,
         ALGO_DEEP,
+        ALGO_DMD_GR,
         ALGO_DROP,        
         ALGO_FRESH,       
         ALGO_GROESTL,     
         ALGO_HEAVY,
         ALGO_HMQ1725,
         ALGO_HODL,
+        ALGO_JHA,
         ALGO_KECCAK,
         ALGO_LBRY,
         ALGO_LUFFA,       
@@ -517,6 +520,7 @@ enum algos {
         ALGO_SKEIN2,      
         ALGO_S3,          
         ALGO_TIMETRAVEL,
+        ALGO_TIMETRAVEL10,
         ALGO_VANILLA,
         ALGO_VELTOR,
         ALGO_WHIRLPOOL,
@@ -548,12 +552,14 @@ static const char* const algo_names[] = {
         "cryptonight",
         "decred",
         "deep",
+        "dmd-gr",
         "drop",
         "fresh",
         "groestl",
         "heavy",
         "hmq1725",
         "hodl",
+        "jha",
         "keccak",
         "lbry",
         "luffa",
@@ -578,6 +584,7 @@ static const char* const algo_names[] = {
         "skein2",
         "s3",
         "timetravel",
+        "timetravel10",
         "vanilla",
         "veltor",
         "whirlpool",
@@ -663,12 +670,14 @@ Options:\n\
                           cryptonight  cryptonote, Monero (XMR)\n\
                           decred\n\
                           deep         Deepcoin (DCN)\n\
+                          dmd-gr       Diamond\n\
                           drop         Dropcoin\n\
                           fresh        Fresh\n\
                           groestl      dmd-gr, Groestl coin\n\
                           heavy        Heavy\n\
                           hmq1725      Espers\n\
                           hodl         Hodlcoin\n\
+                          jha          jackppot (Jackpotcoin)\n\
                           keccak       Keccak\n\
                           lbry         LBC, LBRY Credits\n\
                           luffa        Luffa\n\
@@ -692,7 +701,8 @@ Options:\n\
                           shavite3     Shavite3\n\
                           skein        Skein+Sha (Skeincoin)\n\
                           skein2       Double Skein (Woodcoin)\n\
-                          timetravel   Machinecoin\n\
+                          timetravel   timeravel8, Machinecoin (MAC)\n\
+                          timetravel10 Bitcore (BTX)\n\
                           vanilla      blake256r8vnl (VCash)\n\
                           veltor\n\
                           whirlpool\n\

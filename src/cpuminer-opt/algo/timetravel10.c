@@ -14,6 +14,8 @@
 #include "algo/skein/sph_skein.h"
 #include "algo/luffa/sse2/luffa_for_sse2.h"
 #include "algo/cubehash/sse2/cubehash_sse2.h"
+#include "algo/shavite/sph_shavite.h"
+#include "algo/simd/sse2/nist.h"
 
 #ifdef NO_AES_NI
   #include "algo/groestl/sph_groestl.h"
@@ -21,16 +23,16 @@
   #include "algo/groestl/aes_ni/hash-groestl.h"
 #endif
 
-// Machinecoin Genesis Timestamp
-#define HASH_FUNC_BASE_TIMESTAMP 1389040865
+// BitCore Genesis Timestamp
+#define HASH_FUNC_BASE_TIMESTAMP 1492973331U
 
-#define HASH_FUNC_COUNT 8
+#define HASH_FUNC_COUNT 10
 #define HASH_FUNC_COUNT_PERMUTATIONS 40320
 
 static __thread uint32_t s_ntime = UINT32_MAX;
 static __thread int permutation[HASH_FUNC_COUNT] = { 0 };
 
-inline void tt_swap( int *a, int *b )
+inline void tt10_swap( int *a, int *b )
 {
 	int c = *a;
 	*a = *b;
@@ -41,7 +43,7 @@ inline void reverse( int *pbegin, int *pend )
 {
    while ( (pbegin != pend) && (pbegin != --pend) )
    {
-      tt_swap( pbegin, pend );
+      tt10_swap( pbegin, pend );
       pbegin++;
    }
 }
@@ -70,7 +72,7 @@ static void next_permutation( int *pbegin, int *pend )
 
 	   while ( !(*i < *--k) ) /* do nothing */ ;
 
-	   tt_swap( i, k );
+	   tt10_swap( i, k );
 	   reverse(j, pend);
 		return; // true
 	}
@@ -92,44 +94,48 @@ typedef struct {
         sph_keccak512_context   keccak;
         hashState_luffa         luffa;
         cubehashParam           cube;
+        sph_shavite512_context  shavite;
+        hashState_sd            simd;
 #ifdef NO_AES_NI
         sph_groestl512_context  groestl;
 #else
         hashState_groestl       groestl;
 #endif
-} tt_ctx_holder;
+} tt10_ctx_holder;
 
-tt_ctx_holder tt_ctx __attribute__ ((aligned (64)));
-__thread tt_ctx_holder tt_mid __attribute__ ((aligned (64)));
+tt10_ctx_holder tt10_ctx __attribute__ ((aligned (64)));
+__thread tt10_ctx_holder tt10_mid __attribute__ ((aligned (64)));
 
-void init_tt_ctx()
+void init_tt10_ctx()
 {
-        sph_blake512_init( &tt_ctx.blake );
-        sph_bmw512_init( &tt_ctx.bmw );
-        sph_skein512_init( &tt_ctx.skein );
-        sph_jh512_init( &tt_ctx.jh );
-        sph_keccak512_init( &tt_ctx.keccak );
-        init_luffa( &tt_ctx.luffa, 512 );
-        cubehashInit( &tt_ctx.cube, 512, 16, 32 );
+        sph_blake512_init( &tt10_ctx.blake );
+        sph_bmw512_init( &tt10_ctx.bmw );
+        sph_skein512_init( &tt10_ctx.skein );
+        sph_jh512_init( &tt10_ctx.jh );
+        sph_keccak512_init( &tt10_ctx.keccak );
+        init_luffa( &tt10_ctx.luffa, 512 );
+        cubehashInit( &tt10_ctx.cube, 512, 16, 32 );
+        sph_shavite512_init( &tt10_ctx.shavite );
+        init_sd( &tt10_ctx.simd, 512 );
 #ifdef NO_AES_NI
-        sph_groestl512_init( &tt_ctx.groestl );
+        sph_groestl512_init( &tt10_ctx.groestl );
 #else
-        init_groestl( &tt_ctx.groestl, 64 );
+        init_groestl( &tt10_ctx.groestl, 64 );
 #endif
 };
 
-void timetravel_hash(void *output, const void *input)
+void timetravel10_hash(void *output, const void *input)
 {
    uint32_t hash[128] __attribute__ ((aligned (64)));
    uint32_t *hashA, *hashB;
-   tt_ctx_holder ctx __attribute__ ((aligned (64)));
+   tt10_ctx_holder ctx __attribute__ ((aligned (64)));
    uint32_t dataLen = 64;
    uint32_t *work_data = (uint32_t *)input;
    int i;
    const int midlen = 64;            // bytes
    const int tail   = 80 - midlen;   // 16
 
-   memcpy( &ctx, &tt_ctx, sizeof(tt_ctx) );
+   memcpy( &ctx, &tt10_ctx, sizeof(tt10_ctx) );
 
    for ( i = 0; i < HASH_FUNC_COUNT; i++ )
    {
@@ -150,7 +156,7 @@ void timetravel_hash(void *output, const void *input)
       case 0:
         if ( i == 0 )
         {
-           memcpy( &ctx.blake, &tt_mid.blake, sizeof tt_mid.blake );
+           memcpy( &ctx.blake, &tt10_mid.blake, sizeof tt10_mid.blake );
            sph_blake512( &ctx.blake, input + midlen, tail );
            sph_blake512_close( &ctx.blake, hashB );
         }
@@ -163,7 +169,7 @@ void timetravel_hash(void *output, const void *input)
      case 1:
         if ( i == 0 )
         {
-           memcpy( &ctx.bmw, &tt_mid.bmw, sizeof tt_mid.bmw );
+           memcpy( &ctx.bmw, &tt10_mid.bmw, sizeof tt10_mid.bmw );
            sph_bmw512( &ctx.bmw, input + midlen, tail );
            sph_bmw512_close( &ctx.bmw, hashB );
         }
@@ -177,7 +183,7 @@ void timetravel_hash(void *output, const void *input)
 #ifdef NO_AES_NI
         if ( i == 0 )
         {
-           memcpy( &ctx.groestl, &tt_mid.groestl, sizeof tt_mid.groestl );
+           memcpy( &ctx.groestl, &tt10_mid.groestl, sizeof tt10_mid.groestl );
            sph_groestl512( &ctx.groestl, input + midlen, tail );
            sph_groestl512_close( &ctx.groestl, hashB );
         }
@@ -190,7 +196,7 @@ void timetravel_hash(void *output, const void *input)
 // groestl midstate is slower
 //        if ( i == 0 )
 //        {
-//           memcpy( &ctx.groestl, &tt_mid.groestl, sizeof tt_mid.groestl );
+//           memcpy( &ctx.groestl, &tt10_mid.groestl, sizeof tt10_mid.groestl );
 //           update_and_final_groestl( &ctx.groestl, (char*)hashB,
 //                                    (char*)input + midlen, tail*8 );
 //        }
@@ -204,7 +210,7 @@ void timetravel_hash(void *output, const void *input)
      case 3:
         if ( i == 0 )
         {
-           memcpy( &ctx.skein, &tt_mid.skein, sizeof tt_mid.skein );
+           memcpy( &ctx.skein, &tt10_mid.skein, sizeof tt10_mid.skein );
            sph_skein512( &ctx.skein, input + midlen, tail );
            sph_skein512_close( &ctx.skein, hashB );
         }
@@ -217,7 +223,7 @@ void timetravel_hash(void *output, const void *input)
      case 4:
         if ( i == 0 )
         {
-           memcpy( &ctx.jh, &tt_mid.jh, sizeof tt_mid.jh );
+           memcpy( &ctx.jh, &tt10_mid.jh, sizeof tt10_mid.jh );
            sph_jh512( &ctx.jh, input + midlen, tail );
            sph_jh512_close( &ctx.jh, hashB );
         }
@@ -230,7 +236,7 @@ void timetravel_hash(void *output, const void *input)
      case 5:
         if ( i == 0 )
         {
-           memcpy( &ctx.keccak, &tt_mid.keccak, sizeof tt_mid.keccak );
+           memcpy( &ctx.keccak, &tt10_mid.keccak, sizeof tt10_mid.keccak );
            sph_keccak512( &ctx.keccak, input + midlen, tail );
            sph_keccak512_close( &ctx.keccak, hashB );
         }
@@ -243,7 +249,7 @@ void timetravel_hash(void *output, const void *input)
      case 6:
         if ( i == 0 )
         {
-           memcpy( &ctx.luffa, &tt_mid.luffa, sizeof tt_mid.luffa );
+           memcpy( &ctx.luffa, &tt10_mid.luffa, sizeof tt10_mid.luffa );
            update_and_final_luffa( &ctx.luffa, (BitSequence*)hashB,
                                    (const BitSequence *)input + 64, 16 );
         }
@@ -256,7 +262,7 @@ void timetravel_hash(void *output, const void *input)
      case 7:
         if ( i == 0 )
         {
-           memcpy( &ctx.cube, &tt_mid.cube, sizeof tt_mid.cube );
+           memcpy( &ctx.cube, &tt10_mid.cube, sizeof tt10_mid.cube );
            cubehashUpdateDigest( &ctx.cube, (byte*)hashB,
                                  (const byte*)input + midlen, tail );
         }
@@ -264,6 +270,32 @@ void timetravel_hash(void *output, const void *input)
         {
            cubehashUpdateDigest( &ctx.cube, (byte*)hashB, (const byte*)hashA,
                                  dataLen );
+        }
+        break;
+     case 8:
+        if ( i == 0 )
+        {
+           memcpy( &ctx.shavite, &tt10_mid.shavite, sizeof tt10_mid.shavite );
+           sph_shavite512( &ctx.shavite, input + midlen, tail*8 );
+           sph_shavite512_close( &ctx.shavite, hashB );
+        }
+        else
+        {
+           sph_shavite512( &ctx.shavite, hashA, dataLen );
+           sph_shavite512_close( &ctx.shavite, hashB );
+        }
+        break;
+     case 9:
+        if ( i == 0 )
+        {
+           memcpy( &ctx.simd, &tt10_mid.simd, sizeof tt10_mid.simd );
+           update_final_sd( &ctx.simd, (BitSequence *)hashB,
+                            (const BitSequence *)input + midlen, tail*8 );
+        }
+        else
+        {
+           update_final_sd( &ctx.simd, (BitSequence *)hashB, 
+                            (const BitSequence *)hashA, dataLen*8 );
         }
         break;
      default:
@@ -274,7 +306,7 @@ void timetravel_hash(void *output, const void *input)
 	memcpy(output, &hash[16 * (HASH_FUNC_COUNT - 1)], 32);
 }
 
-int scanhash_timetravel( int thr_id, struct work *work, uint32_t max_nonce,
+int scanhash_timetravel10( int thr_id, struct work *work, uint32_t max_nonce,
                          uint64_t *hashes_done )
 {
    uint32_t _ALIGN(64) hash[8];
@@ -309,42 +341,50 @@ int scanhash_timetravel( int thr_id, struct work *work, uint32_t max_nonce,
       switch ( permutation[0] )
       {
          case 0:
-           memcpy( &tt_mid.blake, &tt_ctx.blake, sizeof(tt_mid.blake) );
-           sph_blake512( &tt_mid.blake, endiandata, 64 );
+           memcpy( &tt10_mid.blake, &tt10_ctx.blake, sizeof(tt10_mid.blake) );
+           sph_blake512( &tt10_mid.blake, endiandata, 64 );
            break;
         case 1:
-           memcpy( &tt_mid.bmw, &tt_ctx.bmw, sizeof(tt_mid.bmw) );
-           sph_bmw512( &tt_mid.bmw, endiandata, 64 );
+           memcpy( &tt10_mid.bmw, &tt10_ctx.bmw, sizeof(tt10_mid.bmw) );
+           sph_bmw512( &tt10_mid.bmw, endiandata, 64 );
            break;
         case 2:
 #ifdef NO_AES_NI
-           memcpy( &tt_mid.groestl, &tt_ctx.groestl, sizeof(tt_mid.groestl ) );
-           sph_groestl512( &tt_mid.groestl, endiandata, 64 );
+           memcpy( &tt10_mid.groestl, &tt10_ctx.groestl, sizeof(tt10_mid.groestl ) );
+           sph_groestl512( &tt10_mid.groestl, endiandata, 64 );
 #else
 // groestl midstate is slower
-//         memcpy( &tt_mid.groestl, &tt_ctx.groestl, sizeof(tt_mid.groestl ) );
-//         update_groestl( &tt_mid.groestl, (char*)endiandata, 64*8 );
+//         memcpy( &tt10_mid.groestl, &tt10_ctx.groestl, sizeof(tt10_mid.groestl ) );
+//         update_groestl( &tt10_mid.groestl, (char*)endiandata, 64*8 );
 #endif
            break;
         case 3:
-           memcpy( &tt_mid.skein, &tt_ctx.skein, sizeof(tt_mid.skein ) );
-           sph_skein512( &tt_mid.skein, endiandata, 64 );
+           memcpy( &tt10_mid.skein, &tt10_ctx.skein, sizeof(tt10_mid.skein ) );
+           sph_skein512( &tt10_mid.skein, endiandata, 64 );
            break;
         case 4:
-           memcpy( &tt_mid.jh, &tt_ctx.jh, sizeof(tt_mid.jh ) );
-           sph_jh512( &tt_mid.jh, endiandata, 64 );
+           memcpy( &tt10_mid.jh, &tt10_ctx.jh, sizeof(tt10_mid.jh ) );
+           sph_jh512( &tt10_mid.jh, endiandata, 64 );
            break;
          case 5:
-           memcpy( &tt_mid.keccak, &tt_ctx.keccak, sizeof(tt_mid.keccak ) );
-           sph_keccak512( &tt_mid.keccak, endiandata, 64 );
+           memcpy( &tt10_mid.keccak, &tt10_ctx.keccak, sizeof(tt10_mid.keccak ) );
+           sph_keccak512( &tt10_mid.keccak, endiandata, 64 );
            break;
         case 6:
-           memcpy( &tt_mid.luffa, &tt_ctx.luffa, sizeof(tt_mid.luffa ) );
-           update_luffa( &tt_mid.luffa, (const BitSequence*)endiandata, 64 );
+           memcpy( &tt10_mid.luffa, &tt10_ctx.luffa, sizeof(tt10_mid.luffa ) );
+           update_luffa( &tt10_mid.luffa, (const BitSequence*)endiandata, 64 );
            break;
         case 7:
-           memcpy( &tt_mid.cube, &tt_ctx.cube, sizeof(tt_mid.cube ) );
-           cubehashUpdate( &tt_mid.cube, (const byte*)endiandata, 64 );
+           memcpy( &tt10_mid.cube, &tt10_ctx.cube, sizeof(tt10_mid.cube ) );
+           cubehashUpdate( &tt10_mid.cube, (const byte*)endiandata, 64 );
+           break;
+        case 8:
+           memcpy( &tt10_mid.shavite, &tt10_ctx.shavite, sizeof(tt10_mid.shavite ) );
+           sph_shavite512( &tt10_mid.shavite, endiandata, 64 );
+           break;
+        case 9:
+           memcpy( &tt10_mid.simd, &tt10_ctx.simd, sizeof(tt10_mid.simd ) );
+           update_sd( &tt10_mid.simd, (const BitSequence *)endiandata, 512 );
            break;
         default:
            break;
@@ -353,7 +393,7 @@ int scanhash_timetravel( int thr_id, struct work *work, uint32_t max_nonce,
 
    do {
         be32enc( &endiandata[19], nonce );
-        timetravel_hash( hash, endiandata );
+        timetravel10_hash( hash, endiandata );
 
         if ( hash[7] <= Htarg && fulltest( hash, ptarget) )
         {
@@ -371,18 +411,18 @@ int scanhash_timetravel( int thr_id, struct work *work, uint32_t max_nonce,
   return 0;
 }
 
-void timetravel_set_target( struct work* work, double job_diff )
+void timetravel10_set_target( struct work* work, double job_diff )
 {
  work_set_target( work, job_diff / (256.0 * opt_diff_factor) );
 }
 
-bool register_timetravel_algo( algo_gate_t* gate )
+bool register_timetravel10_algo( algo_gate_t* gate )
 {
   gate->optimizations = SSE2_OPT | AES_OPT | AVX_OPT | AVX2_OPT;
-  init_tt_ctx();
-  gate->scanhash   = (void*)&scanhash_timetravel;
-  gate->hash       = (void*)&timetravel_hash;
-  gate->set_target = (void*)&timetravel_set_target;
+  init_tt10_ctx();
+  gate->scanhash   = (void*)&scanhash_timetravel10;
+  gate->hash       = (void*)&timetravel10_hash;
+  gate->set_target = (void*)&timetravel10_set_target;
   gate->get_max64  = (void*)&get_max64_0xffffLL;
   return true;
 };

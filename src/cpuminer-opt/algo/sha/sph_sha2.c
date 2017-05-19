@@ -5,7 +5,7 @@
  * ==========================(LICENSE BEGIN)============================
  *
  * Copyright (c) 2007-2010  Projet RNRT SAPHIR
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
  * "Software"), to deal in the Software without restriction, including
@@ -13,10 +13,10 @@
  * distribute, sublicense, and/or sell copies of the Software, and to
  * permit persons to whom the Software is furnished to do so, subject to
  * the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
  * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
  * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -33,7 +33,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "sph-sha2.h"
+#include "sph_sha2.h"
 
 #if SPH_SMALL_FOOTPRINT && !defined SPH_SMALL_FOOTPRINT_SHA2
 #define SPH_SMALL_FOOTPRINT_SHA2   1
@@ -197,10 +197,8 @@ static const sph_u32 K[64] = {
 		sph_u32 A, B, C, D, E, F, G, H, T1, T2; \
 		sph_u32 W00, W01, W02, W03, W04, W05, W06, W07; \
 		sph_u32 W08, W09, W10, W11, W12, W13, W14, W15; \
-		int i; \
  \
-/* for (i=0;i<8;i++) {printf("in[%d]=%08x in[%d]=%08x \n",2*i,in(2*i),2*i+1,in(2*i+1));} */ \
- 		A = (r)[0]; \
+		A = (r)[0]; \
 		B = (r)[1]; \
 		C = (r)[2]; \
 		D = (r)[3]; \
@@ -600,7 +598,6 @@ static const sph_u32 K[64] = {
 		(r)[5] = SPH_T32((r)[5] + F); \
 		(r)[6] = SPH_T32((r)[6] + G); \
 		(r)[7] = SPH_T32((r)[7] + H); \
-/* for (i=0;i<4;i++) {printf("r[%d]=%08x r[%d]=%08x\n",2*i,(r)[2*i],2*i+1,(r)[2*i+1]);}  */ \
 	} while (0)
 
 #endif
@@ -649,14 +646,14 @@ sph_sha256_init(void *cc)
 #define RFUN   sha2_round
 #define HASH   sha224
 #define BE32   1
-#include "algo/sha3/md_helper.c"
+#include "md_helper.c"
 
 /* see sph_sha2.h */
 void
 sph_sha224_close(void *cc, void *dst)
 {
 	sha224_close(cc, dst, 7);
-//	sph_sha224_init(cc);
+	sph_sha224_init(cc);
 }
 
 /* see sph_sha2.h */
@@ -664,7 +661,7 @@ void
 sph_sha224_addbits_and_close(void *cc, unsigned ub, unsigned n, void *dst)
 {
 	sha224_addbits_and_close(cc, ub, n, dst, 7);
-//	sph_sha224_init(cc);
+	sph_sha224_init(cc);
 }
 
 /* see sph_sha2.h */
@@ -680,7 +677,7 @@ void
 sph_sha256_addbits_and_close(void *cc, unsigned ub, unsigned n, void *dst)
 {
 	sha224_addbits_and_close(cc, ub, n, dst, 8);
-//	sph_sha256_init(cc);
+	sph_sha256_init(cc);
 }
 
 /* see sph_sha2.h */
