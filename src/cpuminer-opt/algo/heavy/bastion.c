@@ -1,4 +1,3 @@
-#include "miner.h"
 #include "algo-gate-api.h"
 
 #include <stdio.h>
@@ -16,7 +15,7 @@
 #include "algo/shabal/sph_shabal.h"
 #include "algo/echo/sph_echo.h"
 #include "algo/hamsi/sph_hamsi.h"
-#include "algo/luffa/sse2/luffa_for_sse2.h"
+#include "algo/luffa/luffa_for_sse2.h"
 #include "algo/skein/sse2/skein.c"
 
 #ifndef NO_AES_NI

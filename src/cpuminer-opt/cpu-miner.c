@@ -103,7 +103,11 @@ enum algos opt_algo = ALGO_NULL;
 int opt_scrypt_n = 0;
 int opt_pluck_n = 128;
 int opt_n_threads = 0;
-int64_t opt_affinity = -1L;
+#ifdef __GNUC__
+__int128_t opt_affinity = -1LL;
+#else
+int64_t opt_affinity = -1LL;
+#endif
 int opt_priority = 0;
 int num_cpus;
 char *rpc_url = NULL;;
@@ -195,20 +199,35 @@ static inline void drop_policy(void)
 #define pthread_setaffinity_np(tid,sz,s) {} /* only do process affinity */
 #endif
 
-static void affine_to_cpu_mask(int id, unsigned long mask) {
-	cpu_set_t set;
-	CPU_ZERO(&set);
-	for (uint8_t i = 0; i < num_cpus; i++) {
-		// cpu mask
-		if (mask & (1UL<<i)) { CPU_SET(i, &set); }
-	}
-	if (id == -1) {
-		// process affinity
-		sched_setaffinity(0, sizeof(&set), &set);
-	} else {
-		// thread only
-		pthread_setaffinity_np(thr_info[id].pth, sizeof(&set), &set);
-	}
+#ifdef __GNUC__
+static void affine_to_cpu_mask( int id, unsigned __int128 mask )
+#else
+static void affine_to_cpu_mask( int id, unsigned long long mask )
+#endif
+{
+   cpu_set_t set;
+   CPU_ZERO(&set);
+   uint8_t ncpus = (num_cpus > 256) ? 256 : num_cpus;       
+
+   for ( uint8_t i = 0; i < ncpus; i++ ) 
+   {
+      // cpu mask
+#ifdef __GNUC__
+      if( ( mask & ( (unsigned __int128)1ULL << i ) ) )  CPU_SET( i, &set );
+#else
+      if( (ncpus > 64) || ( mask & (1ULL << i) ) )  CPU_SET( i, &set );
+#endif
+   }
+   if ( id == -1 )
+   {
+      // process affinity
+      sched_setaffinity(0, sizeof(&set), &set);
+   }
+   else
+   {
+      // thread only
+      pthread_setaffinity_np(thr_info[id].pth, sizeof(&set), &set);
+   }
 }
 
 #elif defined(WIN32) /* Windows */
@@ -279,7 +298,8 @@ void work_copy(struct work *dest, const struct work *src)
 bool jr2_work_decode( const json_t *val, struct work *work )
 { return rpc2_job_decode( val, work ); }
 
-bool std_work_decode( const json_t *val, struct work *work )
+// Default
+bool std_le_work_decode( const json_t *val, struct work *work )
 {
     int i;
     const int data_size   = algo_gate.work_data_size;
@@ -304,6 +324,31 @@ bool std_work_decode( const json_t *val, struct work *work )
     return true;
 }
 
+bool std_be_work_decode( const json_t *val, struct work *work )
+{
+    int i;
+    const int data_size   = algo_gate.work_data_size;
+    const int target_size = sizeof(work->target);
+    const int adata_sz    = data_size / 4;
+    const int atarget_sz  = ARRAY_SIZE(work->target);
+
+    if (unlikely( !jobj_binary(val, "data", work->data, data_size) ))
+    {
+       applog(LOG_ERR, "JSON invalid data");
+       return false;
+    }
+    if (unlikely( !jobj_binary(val, "target", work->target, target_size) ))
+    {
+       applog(LOG_ERR, "JSON invalid target");
+       return false;
+    }
+    for ( i = 0; i < adata_sz; i++ )
+          work->data[i] = be32dec( work->data + i );
+    for ( i = 0; i < atarget_sz; i++ )
+          work->target[i] = le32dec( work->target + i );
+    return true;
+}
+
 static bool work_decode( const json_t *val, struct work *work )
 {
     if ( !algo_gate.work_decode( val, work ) )
@@ -313,6 +358,7 @@ static bool work_decode( const json_t *val, struct work *work )
     work->targetdiff = target_to_diff( work->target );
     // for api stats, on longpoll pools
     stratum_diff = work->targetdiff;
+    work->sharediff = 0;
     algo_gate.display_extra_data( work, &net_blocks );
     return true;
 }
@@ -722,6 +768,7 @@ static int share_result( int result, struct work *work, const char *reason )
    uint32_t total_submits;
    float rate;
    char rate_s[8] = {0};
+   double sharediff = work ? work->sharediff : stratum.sharediff;
    int i;
 
    pthread_mutex_lock(&stats_lock);
@@ -752,7 +799,7 @@ static int share_result( int result, struct work *work, const char *reason )
       if ( rate == 100.0 )
          sprintf( rate_s, "%.0f", rate );
       else
-          sprintf( rate_s, "%.1f", ( rate < 99.9 ) ? rate : 99.9 );
+         sprintf( rate_s, "%.1f", ( rate < 99.9 ) ? rate : 99.9 );
    }
    else
    {
@@ -781,6 +828,8 @@ static int share_result( int result, struct work *work, const char *reason )
       sprintf(hr, "%.2f", hashrate );
    }
 
+   if ( sharediff == 0 )
+   {
 #if ((defined(_WIN64) || defined(__WINDOWS__)))
    applog( LOG_NOTICE, "%s %lu/%lu (%s%%), %s %sH, %s %sH/s",
                        sres, ( result ? accepted_count : rejected_count ),
@@ -791,6 +840,20 @@ static int share_result( int result, struct work *work, const char *reason )
                        total_submits, rate_s, hc, hc_units, hr, hr_units,
                        (uint32_t)cpu_temp(0) );
 #endif
+   }
+   else
+   {
+#if ((defined(_WIN64) || defined(__WINDOWS__)))
+   applog( LOG_NOTICE, "%s %lu/%lu (%s%%), diff %.3g, %s %sH/s",
+                       sres, ( result ? accepted_count : rejected_count ),
+                       total_submits, rate_s, sharediff, hr, hr_units );
+#else
+   applog( LOG_NOTICE, "%s %lu/%lu (%s%%), diff %.3g, %s %sH/s, %dC",
+                       sres, ( result ? accepted_count : rejected_count ),
+                       total_submits, rate_s, sharediff, hr, hr_units,
+                       (uint32_t)cpu_temp(0) );
+#endif
+   }
 
    if (reason)
    {
@@ -852,7 +915,7 @@ void jr2_build_stratum_request( char *req, struct work *work )
    free( hashhex );
 }
 
-bool std_submit_getwork_result( CURL *curl, struct work *work )
+bool std_le_submit_getwork_result( CURL *curl, struct work *work )
 {
    char req[JSON_BUF_LEN];
    json_t *val, *res, *reason;
@@ -885,6 +948,41 @@ bool std_submit_getwork_result( CURL *curl, struct work *work )
    json_decref( val );
    return true;
 }
+
+bool std_be_submit_getwork_result( CURL *curl, struct work *work )
+{
+   char req[JSON_BUF_LEN];
+   json_t *val, *res, *reason;
+   char* gw_str;
+   int data_size = algo_gate.work_data_size;
+
+   for ( int i = 0; i < data_size / sizeof(uint32_t); i++ )
+     be32enc( &work->data[i], work->data[i] );
+   gw_str = abin2hex( (uchar*)work->data, data_size );
+   if ( unlikely(!gw_str) )
+   {
+      applog(LOG_ERR, "submit_upstream_work OOM");
+      return false;
+   }
+   // build JSON-RPC request 
+   snprintf( req, JSON_BUF_LEN,
+     "{\"method\": \"getwork\", \"params\": [\"%s\"], \"id\":4}\r\n", gw_str );
+   free( gw_str );
+   // issue JSON-RPC request 
+   val = json_rpc_call( curl, rpc_url, rpc_userpass, req, NULL, 0 );
+   if ( unlikely(!val) )
+   {
+       applog(LOG_ERR, "submit_upstream_work json_rpc_call failed");
+       return false;
+   }
+   res = json_object_get( val, "result" );
+   reason = json_object_get( val, "reject-reason" );
+   share_result( json_is_true( res ), work,
+                 reason ? json_string_value( reason ) : NULL );
+   json_decref( val );
+   return true;
+}
+
 
 bool jr2_submit_getwork_result( CURL *curl, struct work *work )
 {
@@ -958,6 +1056,7 @@ static bool submit_upstream_work( CURL *curl, struct work *work )
    }
    if ( have_stratum )
    {
+       stratum.sharediff = work->sharediff;
        algo_gate.build_stratum_request( req, work, &stratum );
        if ( unlikely( !stratum_send_line( &stratum, req ) ) )
        {
@@ -1458,12 +1557,17 @@ void scrypt_set_target( struct work* work, double job_diff )
    work_set_target( work, job_diff / (65536.0 * opt_diff_factor) );
 }
 
-// set_work_data_endian target, default is do_nothing
-void swab_work_data( struct work *work )
+void alt_set_target( struct work* work, double job_diff )
+{
+   work_set_target( work, job_diff / (256.0 * opt_diff_factor) );
+}
+
+// Default is do_nothing (assumed LE)
+void set_work_data_big_endian( struct work *work )
 {
    int nonce_index = algo_gate.nonce_index;
    for ( int i = 0; i < nonce_index; i++ )
-      work->data[i] = swab32( work->data[i] );
+        be32enc( work->data + i, work->data[i] );
 }
 
 double std_calc_network_diff( struct work* work )
@@ -1501,7 +1605,7 @@ void std_get_new_work( struct work* work, struct work* g_work, int thr_id,
                      uint32_t *end_nonce_ptr, bool clean_job )
 {
    uint32_t *nonceptr = algo_gate.get_nonceptr( work->data );
-   
+
    if ( memcmp( work->data, g_work->data, algo_gate.work_cmp_size )
       && ( clean_job || ( *nonceptr >= *end_nonce_ptr )
          || ( work->job_id != g_work->job_id ) ) )
@@ -1608,21 +1712,37 @@ static void *miner_thread( void *userdata )
 	   drop_policy();
    }
    // CPU thread affinity
-   if (num_cpus > 1)
+/*
+   if ( num_cpus > 64 )
    {
-      if (opt_affinity == -1 && opt_n_threads > 1) 
+      // opt_affinity ignored with more than 64 cpus.
+      if (opt_debug)
+           applog( LOG_DEBUG, "Binding thread %d to cpu %d",
+                   thr_id, thr_id % num_cpus );
+      affine_to_cpu_mask( thr_id, -1 );
+   }
+   else
+*/
+   if ( num_cpus > 1 )
+   {
+      if ( (opt_affinity == -1LL) && (opt_n_threads) > 1 ) 
       {
          if (opt_debug)
-           applog( LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)",
-                   thr_id, thr_id % num_cpus, ( 1 << (thr_id % num_cpus) ) );
-         affine_to_cpu_mask(thr_id, 1UL << (thr_id % num_cpus));
+            applog( LOG_DEBUG, "Binding thread %d to cpu %d (mask %x)",
+                   thr_id, thr_id % num_cpus, ( 1ULL << (thr_id % num_cpus) ) );
+#ifdef __GNUC__
+         affine_to_cpu_mask( thr_id,
+                             (unsigned __int128)1LL << (thr_id % num_cpus) );
+#else
+         affine_to_cpu_mask( thr_id, 1ULL << (thr_id % num_cpus) );
+#endif
       }
-      else if (opt_affinity != -1L)
+      else if (opt_affinity != -1)
       {
-	 if (opt_debug)
-	      applog( LOG_DEBUG, "Binding thread %d to cpu mask %x",
+         if (opt_debug)
+             applog( LOG_DEBUG, "Binding thread %d to cpu mask %x",
                                  thr_id, opt_affinity);
-	 affine_to_cpu_mask(thr_id, (unsigned long)opt_affinity);
+         affine_to_cpu_mask( thr_id, opt_affinity );
       }
    }
 
@@ -1637,7 +1757,7 @@ static void *miner_thread( void *userdata )
        uint64_t hashes_done;
        struct timeval tv_start, tv_end, diff;
        int64_t max64;
-       bool nonce_found = false;
+       int nonce_found = 0;
 
        if ( algo_gate.do_this_thread( thr_id ) )
        {
@@ -1731,7 +1851,7 @@ static void *miner_thread( void *userdata )
 
        // Scan for nonce
        nonce_found = (bool) algo_gate.scanhash( thr_id, &work, max_nonce,
-                                               &hashes_done );
+                                                &hashes_done );
 
        // record scanhash elapsed time
        gettimeofday(&tv_end, NULL);
@@ -1744,11 +1864,34 @@ static void *miner_thread( void *userdata )
 		hashes_done / (diff.tv_sec + diff.tv_usec * 1e-6);
 	  pthread_mutex_unlock(&stats_lock);
        }
-       // if nonce found, submit work 
+       // if nonce(s) submit work 
        if ( nonce_found && !opt_benchmark )
        {
-          if ( !submit_work(mythr, &work) )
+          int num_submitted = 0;
+          // look for 4way nonces
+          for ( int n = 0; n < 4; n++ )
+             if ( work.nfound[n] )
+             {
+                 *algo_gate.get_nonceptr( work.data ) = work.nonces[n]; 
+                 if ( !submit_work( mythr, &work ) )
+                 {
+                    applog( LOG_WARNING, "Failed to submit share." );
+                    break;
+                 }
+                 applog( LOG_NOTICE, "Share submitted." );
+                 num_submitted++;
+             }
+          // must be a one way algo, nonce is already in work data
+          if ( !num_submitted )
+          {
+             if ( !submit_work( mythr, &work ) )
+             {
+                applog( LOG_WARNING, "Failed to submit share." );
                 break;
+             }
+             applog( LOG_NOTICE, "Share submitted." );
+          }
+
           // prevent stale work in solo
           // we can't submit twice a block!
           if (!have_stratum && !have_longpoll)
@@ -2229,7 +2372,7 @@ static void *stratum_thread(void *userdata )
        if ( !s )
        {
           stratum_disconnect(&stratum);
-	  applog(LOG_ERR, "Stratum connection interrupted");
+//	  applog(LOG_WARNING, "Stratum connection interrupted");
 	  continue;
        }
        if (!stratum_handle_method(&stratum, s))
@@ -2303,7 +2446,8 @@ void show_version_and_exit(void)
 void show_usage_and_exit(int status)
 {
 	if (status)
-		fprintf(stderr, "Try `" PACKAGE_NAME " --help' for more information.\n");
+                fprintf(stderr, "Try `--help' for more information.\n");
+//		fprintf(stderr, "Try `" PACKAGE_NAME " --help' for more information.\n");
 	else
 		printf(usage);
 	exit(status);
@@ -2765,47 +2909,52 @@ static int thread_create(struct thr_info *thr, void* func)
 
 static void show_credits()
 {
-	printf("\n         **********  "PACKAGE_NAME" "PACKAGE_VERSION"  *********** \n");
-        printf("     A CPU miner with multi algo support and optimized for CPUs\n");
-        printf("     with AES_NI and AVX extensions.\n");
-	printf("     BTC donation address: 12tdvfF7KmAsihBXQXynT6E6th2c2pByTT\n");
-        printf("     Forked from TPruvot's cpuminer-multi with credits\n");
-        printf("     to Lucas Jones, elmad, palmd, djm34, pooler, ig0tik3d,\n");
-        printf("     Wolf0, Jeff Garzik and Optiminer.\n\n");
+   printf("\n         **********  "PACKAGE_NAME" "PACKAGE_VERSION"  *********** \n");
+   printf("     A CPU miner with multi algo support and optimized for CPUs\n");
+   printf("     with AES_NI and AVX2 and SHA extensions.\n");
+   printf("     BTC donation address: 12tdvfF7KmAsihBXQXynT6E6th2c2pByTT\n\n");
 }
 
 bool check_cpu_capability ()
 {
      char cpu_brand[0x40];
+     // there is no CPU related feature specific to 4way, just AVX2 and AES
      bool cpu_has_sse2 = has_sse2();
      bool cpu_has_aes  = has_aes_ni();
      bool cpu_has_avx  = has_avx1();
      bool cpu_has_avx2 = has_avx2();
      bool cpu_has_sha  = has_sha();
-     bool sw_has_sse2  = false;
+     // no need to check if sw has sse2,
+     // the code won't compile without it.
+//     bool sw_has_sse2  = false;
      bool sw_has_aes   = false;
      bool sw_has_avx   = false;
      bool sw_has_avx2  = false;
      bool sw_has_sha   = false;
+//     bool sw_has_4way  = false;
      set_t algo_features = algo_gate.optimizations;
-     bool algo_has_aes = set_incl( AES_OPT, algo_features );
-     bool algo_has_avx = set_incl( AVX_OPT, algo_features );
-     bool algo_has_avx2 = set_incl( AVX2_OPT, algo_features );
-     bool algo_has_sha = set_incl( SHA_OPT, algo_features );
+     bool algo_has_sse2 = set_incl( SSE2_OPT,     algo_features );
+     bool algo_has_aes  = set_incl( AES_OPT,      algo_features );
+     bool algo_has_avx  = set_incl( AVX_OPT,      algo_features );
+     bool algo_has_avx2 = set_incl( AVX2_OPT,     algo_features );
+     bool algo_has_sha  = set_incl( SHA_OPT,      algo_features );
+//     bool algo_has_4way = set_incl( FOUR_WAY_OPT, algo_features );
      bool use_aes;
      bool use_sse2;
      bool use_avx;
      bool use_avx2;
      bool use_sha;
+//     bool use_4way;
+     bool use_none;
 
      #ifdef __AES__
        sw_has_aes = true;
      #endif
-     #ifdef __SSE2__
-         sw_has_sse2 = true;
-     #endif
+//     #ifdef __SSE2__
+//         sw_has_sse2 = true;
+//     #endif
      #ifdef __AVX__
-         sw_has_avx = true;;
+         sw_has_avx = true;
      #endif
      #ifdef __AVX2__
          sw_has_avx2 = true;
@@ -2813,64 +2962,105 @@ bool check_cpu_capability ()
      #ifdef __SHA__
          sw_has_sha = true;
      #endif
-
+//     #ifdef HASH_4WAY
+//         sw_has_4way = true;
+//     #endif
 
      #if !((__AES__) || (__SSE2__))
          printf("Neither __AES__ nor __SSE2__ defined.\n");
      #endif
 
      cpu_brand_string( cpu_brand );
-     printf( "CPU: %s\n", cpu_brand );
+     printf( "CPU: %s.\n", cpu_brand );
      
-     printf("CPU features:");
-     if ( cpu_has_sse2 ) printf( " SSE2" );
-     if ( cpu_has_aes  ) printf( " AES"  );
-     if ( cpu_has_avx  ) printf( " AVX"  );
-     if ( cpu_has_avx2 ) printf( " AVX2" );
-     if ( cpu_has_sha  ) printf( " SHA" );
-
-     printf("\nSW built on " __DATE__
+     printf("SW built on " __DATE__
      #ifdef _MSC_VER
          " with VC++ 2013\n");
      #elif defined(__GNUC__)
          " with GCC");
-        printf(" %d.%d.%d\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+        printf(" %d.%d.%d.\n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
      #else
-        printf("\n");
+        printf(".\n");
      #endif
 
-     printf("SW features:");
-     if ( sw_has_sse2 ) printf( " SSE2" );
-     if ( sw_has_aes  ) printf( " AES"  );
-     if ( sw_has_avx  ) printf( " AVX"  );
-     if ( sw_has_avx2 ) printf( " AVX2" );
-     if ( sw_has_sha  ) printf( " SHA" );
+     printf("CPU features:");
+     if ( cpu_has_sse2 )  printf( " SSE2" );
+     if ( cpu_has_aes  )  printf( " AES"  );
+     if ( cpu_has_avx  )  printf( " AVX"  );
+     if ( cpu_has_avx2 )  printf( " AVX2" );
+     if ( cpu_has_sha  )  printf( " SHA"  );
 
-     // SSE2 defaults to yes regardless
-     printf("\nAlgo features: SSE2");
-     if ( algo_has_aes ) printf( " AES" );
-     if ( algo_has_avx ) printf( " AVX" );
-     if ( algo_has_avx2 ) printf( " AVX2" );
-     if ( algo_has_sha ) printf( " SHA" );
-     printf("\n");
+     printf(".\nSW features: SSE2");
+     if ( sw_has_aes  )    printf( " AES"  );
+     if ( sw_has_avx  )    printf( " AVX"  );
+     if ( sw_has_avx2 )    printf( " AVX2" );
+//     if ( sw_has_4way )    printf( " 4WAY" );
+     if ( sw_has_sha  )    printf( " SHA"  );
+    
 
-     use_sse2 = cpu_has_sse2 && sw_has_sse2;
+     printf(".\nAlgo features:");
+     if ( algo_features == EMPTY_SET ) printf( " None" );
+     else
+     {
+        if ( algo_has_sse2 )           printf( " SSE2" );
+        if ( algo_has_aes  )           printf( " AES"  );
+        if ( algo_has_avx  )           printf( " AVX"  );
+        if ( algo_has_avx2 )           printf( " AVX2" );
+//        if ( algo_has_4way )           printf( " 4WAY" );
+        if ( algo_has_sha  )           printf( " SHA"  );
+     }
+     printf(".\n");
+
+     // Check for CPU and build incompatibilities
+     if ( !cpu_has_sse2 )
+     {
+        printf( "A CPU with SSE2 is required to use cpuminer-opt\n" );
+        return false;
+     }
+     if ( sw_has_avx2 && !( cpu_has_avx2 && cpu_has_aes ) )
+     {
+        printf( "The SW build requires a CPU with AES and AVX2!\n" );
+        return false;
+     }
+     if ( sw_has_avx && !cpu_has_avx )
+     {
+        printf( "The SW build requires a CPU with AVX!\n" );
+        return false;
+     }
+     if ( sw_has_aes && !cpu_has_aes )
+     {
+        printf( "The SW build requires a CPU with AES!\n" );
+        return false;
+     }
+     if ( sw_has_sha && !cpu_has_sha )
+     {
+        printf( "The SW build requires a CPU with SHA!\n" );
+        return false;
+     }
+
+     // Determine mining options
+     use_sse2 = cpu_has_sse2 && algo_has_sse2;
      use_aes  = cpu_has_aes  && sw_has_aes  && algo_has_aes;
      use_avx  = cpu_has_avx  && sw_has_avx  && algo_has_avx;
      use_avx2 = cpu_has_avx2 && sw_has_avx2 && algo_has_avx2;
      use_sha  = cpu_has_sha  && sw_has_sha  && algo_has_sha;
-
-     if ( use_sse2 )
-     {
-        printf( "Start mining with SSE2" );
-        if      ( use_aes  ) printf( " AES" );
-        if      ( use_avx2 ) printf( " AVX2" );
-        else if ( use_avx  ) printf( " AVX" );
-        if      ( use_sha  ) printf( " SHA" );
-        printf( "\n\n" );
-     }
+//     use_4way = cpu_has_avx2 && sw_has_4way && algo_has_4way;
+     use_none = !( use_sse2 || use_aes || use_avx || use_avx2 || use_sha );
+//                   || use_4way );
+      
+     // Display best options
+     printf( "Start mining with" );
+     if         ( use_none ) printf( " no optimizations" );
      else
-        printf( CL_RED "Unsupported CPU, miner will likely crash!\n\n" CL_N );
+     {
+        if      ( use_aes  ) printf( " AES"  );
+        if      ( use_avx2 ) printf( " AVX2" );
+        else if ( use_avx  ) printf( " AVX"  );
+        else if ( use_sse2 ) printf( " SSE2" );
+//        if      ( use_4way ) printf( " 4WAY" );
+        if      ( use_sha  ) printf( " SHA"  );
+     }
+     printf( ".\n\n" );
 
      return true;
 }
@@ -3028,18 +3218,30 @@ int main(int argc, char *argv[])
 		SetPriorityClass(GetCurrentProcess(), prio);
 	}
 #endif
-	if (opt_affinity != -1)
-        {
-		if (!opt_quiet)
-			applog(LOG_DEBUG, "Binding process to cpu mask %x", opt_affinity);
-		affine_to_cpu_mask(-1, (unsigned long)opt_affinity);
-	}
 
+   if ( num_cpus != opt_n_threads )   
+     applog( LOG_INFO,"%u CPU cores available, %u miner threads selected.",
+             num_cpus, opt_n_threads );
+   if ( opt_affinity != -1 )
+   {
+      if ( num_cpus > 64 )
+      {
+          applog(LOG_WARNING,"--cpu-affinity argument is not supported with more");
+          applog(LOG_WARNING," than 64 CPUs, using default affinity.");
+          opt_affinity = -1;
+      }
+      else	
+      {
+         if (!opt_quiet)
+            applog(LOG_DEBUG, "Binding process to cpu mask %x", opt_affinity);
+         affine_to_cpu_mask( -1, (unsigned long)opt_affinity );
+      }
+   }
 
-//#ifdef HAVE_SYSLOG_H
-//	if (use_syslog)
-//		openlog("cpuminer", LOG_PID, LOG_USER);
-//#endif
+#ifdef HAVE_SYSLOG_H
+	if (use_syslog)
+		openlog("cpuminer", LOG_PID, LOG_USER);
+#endif
 
 	work_restart = (struct work_restart*) calloc(opt_n_threads, sizeof(*work_restart));
 	if (!work_restart)

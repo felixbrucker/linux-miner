@@ -1,32 +1,20 @@
-#include "miner.h"
-#include "algo-gate-api.h"
-
+#include "deep-gate.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
-
-#include "algo/luffa/sph_luffa.h"
-#include "algo/cubehash/sph_cubehash.h"
-#include "algo/shavite/sph_shavite.h"
-#include "algo/simd/sph_simd.h"
-#include "algo/echo/sph_echo.h"
-
-#include "algo/luffa/sse2/luffa_for_sse2.h" 
+#include "algo/luffa/luffa_for_sse2.h" 
 #include "algo/cubehash/sse2/cubehash_sse2.h" 
-#include "algo/simd/sse2/nist.h"
-#include "algo/shavite/sph_shavite.h"
-
 #ifndef NO_AES_NI
 #include "algo/echo/aes_ni/hash_api.h"
+#else
+#include "algo/echo/sph_echo.h"
 #endif
 
 typedef struct
 {
         hashState_luffa         luffa;
         cubehashParam           cubehash;
-        sph_shavite512_context  shavite;
-        hashState_sd            simd;
 #ifdef NO_AES_NI
         sph_echo512_context echo;
 #else
@@ -134,6 +122,7 @@ int scanhash_deep( int thr_id, struct work *work, uint32_t max_nonce,
 	        	if (!(hash64[7] & mask)) {
 		            printf("[%d]",thr_id);
 			    if (fulltest(hash64, ptarget)) {
+                             work_set_target_ratio( work, hash64 );
                              *hashes_done = n - first_nonce + 1;
 				return true;
 	                    }
@@ -149,13 +138,4 @@ int scanhash_deep( int thr_id, struct work *work, uint32_t max_nonce,
 	pdata[19] = n;
 	return 0;
 }
-
-bool register_deep_algo( algo_gate_t* gate )
-{
-  gate->optimizations = SSE2_OPT | AES_OPT | AVX_OPT | AVX2_OPT;
-  init_deep_ctx();
-  gate->scanhash = (void*)&scanhash_deep;
-  gate->hash     = (void*)&deep_hash;
-  return true;
-};
 

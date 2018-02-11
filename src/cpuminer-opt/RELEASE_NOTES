@@ -9,13 +9,27 @@ are not yet available.
 cpuminer-opt is a console program, if you're using a mouse you're doing it
 wrong.
 
+Security warning
+----------------
+
+Miner programs are often flagged as malware by antivirus programs. This is
+a false positive, they are flagged simply because they are miners. The source
+code is open for anyone to inspect. If you don't trust the software, don't use
+it.
+
+The cryptographic code has been taken from trusted sources but has been
+modified for speed at the expense of accepted security practices. This
+code should not be imported into applications where secure cryptography is
+required.
+
 Compile Instructions
 --------------------
 
 Requirements:
 
-Intel Core2 or newer, or AMD Steamroller or newer CPU.
-64 bit Linux or Windows operating system.
+Intel Core2 or newer, or AMD Steamroller or newer CPU. ARM CPUs are not
+supported.
+64 bit Linux or Windows operating system. Apple is not supported.
 
 Building on linux prerequisites:
 
@@ -49,8 +63,15 @@ pthreads
 zlib
 
 SHA support on AMD Ryzen CPUs requires gcc version 5 or higher and openssl 1.1
-or higher. Additional compile options may also be required such as
+or higher. Reports of improved performiance on Ryzen when using openssl 1.0.2
+have been due to AVX and AVX2 optimizations added to that version.
+Additional improvements are expected on Ryzen with openssl 1.1.
 "-march-znver1" or "-msha".
+
+Additional instructions for static compilalation can be found here:
+https://lxadm.com/Static_compilation_of_cpuminer
+Static builds should only considered in a homogeneous HW and SW environment.
+Local builds will always have the best performance and compatibility.
 
 Extract cpuminer source.
 
@@ -63,9 +84,22 @@ Run ./build.sh to build on Linux or execute the following commands.
 CFLAGS="-O3 -march=native -Wall" CXXFLAGS="$CFLAGS -std=gnu++11" ./configure --with-curl
 make
 
+Additional optional compile flags, add the following to CFLAGS to activate:
+
+-DUSE_SPH_SHA
+
+SPH may give slightly better performance on algos that use sha256 when using
+openssl 1.0.1 or older. Openssl 1.0.2 adds AVX2 and 1.1 adds SHA and perform
+better than SPH.
+
 Start mining.
 
 ./cpuminer -a algo -o url -u username -p password
+
+Windows
+
+Precompiled Windows binaries are built on a Linux host using Mingw
+with a more recent compiler than the following Windows hosted procedure.
 
 Building on Windows prerequisites:
 
@@ -97,17 +131,21 @@ or similar Windows program.
 In msys shell cd to miner directory.
 cd /c/path/to/cpuminer-opt
 
-Run winbuild.sh to build on Windows or execute the following commands.
+Run build.sh to build on Windows or execute the following commands.
 
 ./autogen.sh
 CFLAGS="-O3 -march=native -Wall" CXXFLAGS="$CFLAGS -std=gnu++11 -fpermissive" ./configure --with-curl
 make
 
+Start mining
+
+cpuminer.exe -a algo -o url -u user -p password
+
 The following tips may be useful for older AMD CPUs.
 
-AMD CPUs older than Piledriver, including Athlon x2 and Phenom II x4, are not
-supported by cpuminer-opt due to an incompatible implementation of SSE2 on
-these CPUs. Some algos may crash the miner with an invalid instruction.
+AMD CPUs older than Steamroller, including Athlon x2 and Phenom II x4, are
+not supported by cpuminer-opt due to an incompatible implementation of SSE2
+on these CPUs. Some algos may crash the miner with an invalid instruction.
 Users are recommended to use an unoptimized miner such as cpuminer-multi.
 
 Some users with AMD CPUs without AES_NI have reported problems compiling
@@ -120,6 +158,139 @@ Support for even older x86_64 without AES_NI or SSE2 is not availble.
 
 Change Log
 ----------
+
+v3.8.1.1
+
+Fixed Windows AVX2 crash.
+
+v3.8.1
+
+Fixes x16r on CPUs with only SSE2.
+More Optimizations for X algos, qubit & deep.
+Corrected algo optimizations for scrypt and yescrypt, no new optimizations.
+
+v3.8.0.1
+
+Fixed x16r AVX2 low hash rate.
+
+v3.8.0
+
+4way no longer a seperate feature, included in AVX2.
+Added x16r algo for Ravencoin, anime algo for Animecoin.
+More 4way optimizations for X13 and up.
+Tweaked CPU affinity to better support more than 64 CPUs.
+Fixed compile problem on some old AMD CPUs.
+
+v3.7.10
+
+4way optimizations for lyra2rev2, lyra2h, quark, timetravel8, timetravel10
+   x11evo, blakecoin.
+Faster x13sm3 (hsr).
+Added share difficulty to accepted message.
+
+v3.7.9
+
+Partial 4way optimizations for veltor, skunk, polytimos, lyra2z.
+Additional 4way optimizations for X algos.
+New algo yescryptr8 for BitZeny, not to be confused with original
+yescrypt Globalboost-Y.
+
+v3.7.8
+
+Partial 4way optimization for most X algos including c11, xevan, phi, hsr
+
+v3.7.7
+
+Fixed regression caused by 64 CPU support.
+Fixed lyra2h.
+
+v3.7.6
+
+Added lyra2h algo for Hppcoin.
+Added support for more than 64 CPUs.
+Optimized shavite512 with AES, improves x11 etc.
+
+v3.7.5
+
+New algo keccakc for Creative coin with 4way optimizations
+
+Rewrote some AVX/AVX2 code for more consistent implementation and some
+optimizing.
+
+Enhanced capabilities check to support 4way, more precise reporting of
+features (not all algos use SSE2), and better error messages when using
+an incompatible pre-built version (Windows users).
+
+v3.7.4
+
+Removed unnecessary build options.
+
+Added 4way support for tribus and nist5.
+
+v3.7.3
+
+Added polytimos algo.
+
+Introducing 4-way AVX2 optimization giving up to 4x performance inprovement
+on many compute bound algos. First supported algos: skein, skein2, blake &
+keccak. This feature is only available when compiled from source. See above
+for instcuctions how to enable 4-way during compilation.
+
+Updated Dockerfile.
+
+v3.7.2
+
+Fixed yescryptr16
+Changed default sha256 and sha512 to openssl. This should be used when
+compiling with openssl 1.0.2 or higher (Ubuntu 16.04).
+This should increase the hashrate for yescrypt, yescryptr16, m7m, xevan, skein,
+myr-gr & others  when openssl 1.0.2 is installed.
+Users with openssl 1.0.1 (Ubuntu 14.04) may get better perforance by adding
+"-DUSE_SPH_SHA" to CLAGS. 
+Windows binaries are compiled with -DUSE_SPH_SHA and won't get the speedup.
+
+v3.7.1
+
+Added yescryptr16 algo for Yenten coin
+Added SHA support to yescrypt and yescryptr16
+Small code cleanup
+
+v3.7.0
+
+Fixed x14 misalignment bug.
+Fixed decred stake version bug.
+Getwork fixes for algos that use big endian data encoding: m7m, zr5, neoscrypt,
+decred.
+
+v3.6.10
+
+Fixed misalignment bug in hsr.
+
+v3.6.9
+
+Added phi1612 algo for LUX coin
+Added x13sm3 algo, alias hsr, for Hshare coin
+
+v3.6.8
+
+Fixed timetravel10 on Windows.
+
+v3.6.7
+
+Skunk algo added.
+Tribus a little faster.
+Minor restructuring.
+
+v3.6.6
+
+added tribus algo for Denarius (DNR)
+
+configure removed from .gitignore. This should allow git clone to compile
+on Windows/mingw.
+
+Fixed CPU temperature monitoring on some CPUs (Linux only).
+
+Fixed a compile error on FreeBSD (unsupported YMMV).
 
 v3.6.5
 

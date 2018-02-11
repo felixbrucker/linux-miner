@@ -955,6 +955,7 @@ static const struct {
 
 #endif
 
+
 #define TH_ELT(t, c0, c1, c2, c3, c4, d0, d1, d2, d3, d4)   do { \
 		DECL64(tt0); \
 		DECL64(tt1); \
@@ -1643,8 +1644,7 @@ keccak_core(sph_keccak_context *kc, const void *data, size_t len, size_t lim)
 		for (j = 0; j < d; j += 8) \
 			sph_enc64le_aligned(u.tmp + j, kc->u.wide[j >> 3]); \
 		memcpy(dst, u.tmp, d); \
-		keccak_init(kc, (unsigned)d << 3); \
-	} \
+}
 
 #else
 

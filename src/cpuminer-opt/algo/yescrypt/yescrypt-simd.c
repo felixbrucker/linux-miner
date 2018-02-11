@@ -46,7 +46,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include "sha256_Y.h"
 #include "sysendian.h"
 
@@ -1302,10 +1301,17 @@ yescrypt_kdf(const yescrypt_shared_t * shared, yescrypt_local_t * local,
 		S = (uint8_t *)XY + XY_size;
 
 	if (t || flags) {
-		SHA256_CTX_Y ctx;
-		SHA256_Init_Y(&ctx);
-		SHA256_Update_Y(&ctx, passwd, passwdlen);
-		SHA256_Final_Y(sha256, &ctx);
+#ifndef USE_SPH_SHA
+		SHA256_CTX ctx;
+		SHA256_Init(&ctx);
+		SHA256_Update(&ctx, passwd, passwdlen);
+		SHA256_Final(sha256, &ctx);
+#else
+                SHA256_CTX_Y ctx;
+                SHA256_Init_Y(&ctx);
+                SHA256_Update_Y(&ctx, passwd, passwdlen);
+                SHA256_Final_Y(sha256, &ctx);
+#endif
 		passwd = sha256;
 		passwdlen = sizeof(sha256);
 	}
@@ -1351,26 +1357,30 @@ yescrypt_kdf(const yescrypt_shared_t * shared, yescrypt_local_t * local,
 	 * SCRAM's use of SHA-1) would be usable with yescrypt hashes.
 	 */
 	if ((t || flags) && buflen == sizeof(sha256)) {
-		/* Compute ClientKey */
-		{
-			HMAC_SHA256_CTX_Y ctx;
-			HMAC_SHA256_Init_Y(&ctx, buf, buflen);
-#if 0
-/* Proper yescrypt */
- 			HMAC_SHA256_Update_Y(&ctx, "Client Key", 10);
+	   /* Compute ClientKey */
+	   {
+		HMAC_SHA256_CTX ctx;
+		HMAC_SHA256_Init(&ctx, buf, buflen);
+                if ( client_key_hack ) // GlobalBoost-Y buggy yescrypt
+			HMAC_SHA256_Update(&ctx, salt, saltlen);
+                else // Proper yescrypt
+                        HMAC_SHA256_Update(&ctx, "Client Key", 10);
+		HMAC_SHA256_Final(sha256, &ctx);
+	   }
+	   /* Compute StoredKey */
+	   {
+#ifndef USE_SPH_SHA
+		SHA256_CTX ctx;
+		SHA256_Init(&ctx);
+		SHA256_Update(&ctx, sha256, sizeof(sha256));
+		SHA256_Final(buf, &ctx);
 #else
-/* GlobalBoost-Y buggy yescrypt */
-			HMAC_SHA256_Update_Y(&ctx, salt, saltlen);
+                SHA256_CTX_Y ctx;
+                SHA256_Init_Y(&ctx);
+                SHA256_Update_Y(&ctx, sha256, sizeof(sha256));
+                SHA256_Final_Y(buf, &ctx);
 #endif
-			HMAC_SHA256_Final_Y(sha256, &ctx);
-		}
-		/* Compute StoredKey */
-		{
-			SHA256_CTX_Y ctx;
-			SHA256_Init_Y(&ctx);
-			SHA256_Update_Y(&ctx, sha256, sizeof(sha256));
-			SHA256_Final_Y(buf, &ctx);
-		}
+	   }
 	}
 
 	if (free_region(&tmp))

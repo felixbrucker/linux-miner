@@ -1,10 +1,9 @@
-#include "miner.h"
 #include "algo-gate-api.h"
 
 #include <string.h>
 #include <stdint.h>
 
-#include "crypto/blake2s.h"
+#include "sph-blake2s.h"
 
 static __thread blake2s_state s_midstate;
 static __thread blake2s_state s_ctx;

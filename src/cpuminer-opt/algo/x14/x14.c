@@ -1,5 +1,4 @@
-#include "miner.h"
-#include "algo-gate-api.h"
+#include "x14-gate.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -21,9 +20,9 @@
 #include "algo/fugue/sph_fugue.h"
 #include "algo/shabal/sph_shabal.h"
 
-#include "algo/luffa/sse2/luffa_for_sse2.h"
+#include "algo/luffa/luffa_for_sse2.h"
 #include "algo/cubehash/sse2/cubehash_sse2.h"
-#include "algo/simd/sse2/nist.h"
+#include "algo/simd/nist.h"
 #include "algo/echo/sse2/sph_echo.h"
 #include "algo/blake/sse2/blake.c"
 #include "algo/bmw/sse2/bmw.c"
@@ -73,9 +72,9 @@ void init_x14_ctx()
         sph_shabal512_init(&x14_ctx.shabal);
 };
 
-static void x14hash(void *output, const void *input)
+void x14hash(void *output, const void *input)
 {
-	unsigned char hash[128]; __attribute__ ((aligned (32)))
+	unsigned char hash[128] __attribute__ ((aligned (32)));
 	#define hashB hash+64
 
         x14_ctx_holder ctx;
@@ -234,6 +233,7 @@ int scanhash_x14(int thr_id, struct work *work,
 				if (!(hash64[7] & mask)) {
 					printf("[%d]",thr_id);
 					if (fulltest(hash64, ptarget)) {
+                                                work_set_target_ratio( work, hash64 );
 						*hashes_done = n - first_nonce + 1;
 						return true;
 					}
@@ -249,14 +249,3 @@ int scanhash_x14(int thr_id, struct work *work,
 	pdata[19] = n;
 	return 0;
 }
-
-bool register_x14_algo( algo_gate_t* gate )
-{
-  gate->optimizations = SSE2_OPT | AES_OPT | AVX_OPT | AVX2_OPT;
-  init_x14_ctx();
-  gate->scanhash  = (void*)&scanhash_x14;
-  gate->hash      = (void*)&x14hash;
-  gate->get_max64 = (void*)&get_max64_0x3ffff;
-  return true;
-};
-

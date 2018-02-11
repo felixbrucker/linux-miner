@@ -1,11 +1,8 @@
-#include "miner.h"
-#include "algo-gate-api.h"
-
+#include "x17-gate.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
-
 #include "algo/blake/sph_blake.h"
 #include "algo/bmw/sph_bmw.h"
 #include "algo/groestl/sph_groestl.h"
@@ -24,15 +21,15 @@
 #include "algo/sha/sph_sha2.h"
 #include "algo/haval/sph-haval.h"
 
-#include "algo/luffa/sse2/luffa_for_sse2.h" 
+#include "algo/luffa/luffa_for_sse2.h" 
 #include "algo/cubehash/sse2/cubehash_sse2.h"
-#include "algo/simd/sse2/nist.h"
+#include "algo/simd/nist.h"
 #include "algo/blake/sse2/blake.c"
 #include "algo/bmw/sse2/bmw.c"
 #include "algo/keccak/sse2/keccak.c"
 #include "algo/skein/sse2/skein.c"
 #include "algo/jh/sse2/jh_sse2_opt64.h"
-
+#include <openssl/sha.h>
 #ifndef NO_AES_NI
   #include "algo/echo/aes_ni/hash_api.h"
   #include "algo/groestl/aes_ni/hash-groestl.h"
@@ -54,7 +51,11 @@ typedef struct {
         sph_fugue512_context    fugue;
         sph_shabal512_context   shabal;
         sph_whirlpool_context   whirlpool;
+#ifndef USE_SPH_SHA
+        SHA512_CTX              sha512;
+#else
         sph_sha512_context      sha512;
+#endif
         sph_haval256_5_context  haval;
 } x17_ctx_holder;
 
@@ -77,11 +78,15 @@ void init_x17_ctx()
         sph_fugue512_init( &x17_ctx.fugue );
         sph_shabal512_init( &x17_ctx.shabal );
         sph_whirlpool_init( &x17_ctx.whirlpool );
+#ifndef USE_SPH_SHA
+        SHA512_Init( &x17_ctx.sha512 );
+#else
         sph_sha512_init(&x17_ctx.sha512);
+#endif
         sph_haval256_5_init(&x17_ctx.haval);
 };
 
-static void x17hash(void *output, const void *input)
+void x17_hash(void *output, const void *input)
 {
 	unsigned char hash[128] __attribute__ ((aligned (64)));
 	#define hashB hash+64
@@ -187,9 +192,13 @@ static void x17hash(void *output, const void *input)
 	sph_whirlpool(&ctx.whirlpool, hash, 64);
 	sph_whirlpool_close(&ctx.whirlpool, hashB);
 
+#ifndef USE_SPH_SHA
+        SHA512_Update( &ctx.sha512, hashB, 64 );
+        SHA512_Final( (unsigned char*) hash, &ctx.sha512 );
+#else
         sph_sha512(&ctx.sha512,(const void*) hashB, 64);
         sph_sha512_close(&ctx.sha512,(void*) hash);
-
+#endif
         sph_haval256_5(&ctx.haval,(const void*) hash, 64);
         sph_haval256_5_close(&ctx.haval,hashB);
 
@@ -239,7 +248,7 @@ int scanhash_x17(int thr_id, struct work *work,
 			do {
 				pdata[19] = ++n;
 				be32enc(&endiandata[19], n);
-				x17hash(hash64, endiandata);
+				x17_hash(hash64, endiandata);
 #ifndef DEBUG_ALGO
 				if (!(hash64[7] & mask))
                                 {
@@ -257,6 +266,7 @@ int scanhash_x17(int thr_id, struct work *work,
 				if (!(hash64[7] & mask)) {
 					printf("[%d]",thr_id);
 					if (fulltest(hash64, ptarget)) {
+                                                work_set_target_ratio( work, hash64 );
 						*hashes_done = n - first_nonce + 1;
 						return true;
 					}
@@ -272,13 +282,3 @@ int scanhash_x17(int thr_id, struct work *work,
 	pdata[19] = n;
 	return 0;
 }
-
-bool register_x17_algo( algo_gate_t* gate )
-{
-  gate->optimizations = SSE2_OPT | AES_OPT | AVX_OPT | AVX2_OPT;
-  init_x17_ctx();
-  gate->scanhash = (void*)&scanhash_x17;
-  gate->hash     = (void*)&x17hash;
-  return true;
-};
-

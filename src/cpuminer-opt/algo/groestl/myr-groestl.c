@@ -1,4 +1,3 @@
-#include "miner.h"
 #include "algo-gate-api.h"
 
 #include <stdio.h>
@@ -12,11 +11,8 @@
   #include "aes_ni/hash-groestl.h"
 #endif
 
-#if defined __SHA__
-  #include <openssl/sha.h>
-#else
-  #include "algo/sha/sph_sha2.h"
-#endif
+#include <openssl/sha.h>
+#include "algo/sha/sph_sha2.h"
 
 typedef struct {
 #ifdef NO_AES_NI
@@ -24,11 +20,11 @@ typedef struct {
 #else
     hashState_groestl       groestl;
 #endif
-#if defined __SHA__
-   SHA256_CTX         sha;
-#else
+//#ifndef USE_SPH_SHA
+//   SHA256_CTX         sha;
+//#else
    sph_sha256_context sha;
-#endif
+//#endif
 } myrgr_ctx_holder;
 
 myrgr_ctx_holder myrgr_ctx;
@@ -40,11 +36,11 @@ void init_myrgr_ctx()
 #else
      init_groestl (&myrgr_ctx.groestl, 64 );
 #endif
-#if defined __SHA__
-   SHA256_Init( &myrgr_ctx.sha );
-#else
+//#ifndef USE_SPH_SHA
+//   SHA256_Init( &myrgr_ctx.sha );
+//#else
    sph_sha256_init( &myrgr_ctx.sha );
-#endif
+//#endif
 }
 
 void myriadhash( void *output, const void *input )
@@ -61,13 +57,13 @@ void myriadhash( void *output, const void *input )
                                (const char*)input, 640 );
 #endif
 
-#if defined __SHA__
-     SHA256_Update( &ctx.sha, hash, 64 );
-     SHA256_Final( (unsigned char*) hash, &ctx.sha );
-#else
+//#ifndef USE_SPH_SHA
+//     SHA256_Update( &ctx.sha, hash, 64 );
+//     SHA256_Final( (unsigned char*) hash, &ctx.sha );
+//#else
      sph_sha256(&ctx.sha, hash, 64);
      sph_sha256_close(&ctx.sha, hash);
-#endif
+//#endif
      memcpy(output, hash, 32);
 }
 
@@ -108,7 +104,7 @@ int scanhash_myriad( int thr_id, struct work *work, uint32_t max_nonce,
 
 bool register_myriad_algo( algo_gate_t* gate )
 {
-    gate->optimizations = SSE2_OPT | AES_OPT | SHA_OPT;
+    gate->optimizations = SSE2_OPT | AES_OPT | AVX_OPT | AVX2_OPT | SHA_OPT;
     init_myrgr_ctx();
     gate->scanhash = (void*)&scanhash_myriad;
     gate->hash     = (void*)&myriadhash;

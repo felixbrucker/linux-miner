@@ -22,30 +22,6 @@ cpuminer_SOURCES = \
   api.c \
   sysinfos.c \
   algo-gate-api.c\
-  algo/groestl/sph_groestl.c \
-  algo/skein/sph_skein.c \
-  algo/bmw/sph_bmw.c \
-  algo/shavite/sph_shavite.c \
-  algo/shavite/shavite.c \
-  algo/echo/sph_echo.c \
-  algo/blake/sph_blake.c \
-  algo/blake/sph_blake2b.c \
-  algo/heavy/sph_hefty1.c \
-  algo/blake/mod_blakecoin.c \
-  algo/luffa/sph_luffa.c \
-  algo/cubehash/sph_cubehash.c \
-  algo/simd/sph_simd.c \
-  algo/hamsi/sph_hamsi.c \
-  algo/fugue/sph_fugue.c \
-  algo/gost/sph_gost.c \
-  algo/jh/sph_jh.c \
-  algo/keccak/sph_keccak.c \
-  algo/keccak/keccak.c\
-  algo/sha/sph_sha2.c \
-  algo/sha/sph_sha2big.c \
-  algo/shabal/sph_shabal.c \
-  algo/whirlpool/sph_whirlpool.c\
-  crypto/blake2s.c \
   crypto/oaes_lib.c \
   crypto/c_keccak.c \
   crypto/c_groestl.c \
@@ -61,84 +37,198 @@ cpuminer_SOURCES = \
   algo/argon2/ar2/cores.c \
   algo/argon2/ar2/ar2-scrypt-jane.c \
   algo/argon2/ar2/blake2b.c \
-  algo/axiom.c \
+  algo/blake/sph_blake.c \
+  algo/blake/blake-hash-4way.c \
+  algo/blake/blake-gate.c \
   algo/blake/blake.c \
+  algo/blake/blake-4way.c \
+  algo/blake/sph_blake2b.c \
   algo/blake/blake2b.c \
+  algo/blake/sph-blake2s.c \
   algo/blake/blake2s.c \
+  algo/blake/blakecoin-gate.c \
+  algo/blake/mod_blakecoin.c \
   algo/blake/blakecoin.c \
+  algo/blake/blakecoin-4way.c \
+  algo/blake/decred-gate.c \
   algo/blake/decred.c \
+  algo/blake/decred-4way.c \
+  algo/blake/pentablake-gate.c \
+  algo/blake/pentablake-4way.c \
   algo/blake/pentablake.c \
+  algo/bmw/sph_bmw.c \
+  algo/bmw/bmw-hash-4way.c \
   algo/bmw/bmw256.c \
-  algo/cubehash/sse2/cubehash_sse2.c\
   algo/cryptonight/cryptolight.c \
   algo/cryptonight/cryptonight-common.c\
   algo/cryptonight/cryptonight-aesni.c\
   algo/cryptonight/cryptonight.c\
-  algo/drop.c \
+  algo/cubehash/sph_cubehash.c \
+  algo/cubehash/sse2/cubehash_sse2.c\
+  algo/echo/sph_echo.c \
   algo/echo/aes_ni/hash.c\
-  algo/fresh.c \
+  algo/gost/sph_gost.c \
+  algo/groestl/sph_groestl.c \
   algo/groestl/groestl.c \
   algo/groestl/myr-groestl.c \
   algo/groestl/aes_ni/hash-groestl.c \
   algo/groestl/aes_ni/hash-groestl256.c \
-  algo/haval/haval.c\
+  algo/fugue/sph_fugue.c \
+  algo/hamsi/sph_hamsi.c \
+  algo/hamsi/hamsi-hash-4way.c \
+  algo/haval/haval.c \
+  algo/haval/haval-hash-4way.c \
+  algo/heavy/sph_hefty1.c \
   algo/heavy/heavy.c \
   algo/heavy/bastion.c \
-  algo/hmq1725.c \
   algo/hodl/aes.c \
   algo/hodl/hodl-gate.c \
   algo/hodl/hodl-wolf.c \
   algo/hodl/sha512_avx.c \
   algo/hodl/sha512_avx2.c \
+  algo/jh/sph_jh.c \
+  algo/jh/jh-hash-4way.c \
+  algo/jh/jha-gate.c \
+  algo/jh/jha-4way.c \
   algo/jh/jha.c \
+  algo/keccak/sph_keccak.c \
+  algo/keccak/keccak.c\
+  algo/keccak/keccak-hash-4way.c \
+  algo/keccak/keccak-4way.c\
+  algo/keccak/keccak-gate.c \
+  algo/keccak/sse2/keccak.c \
   algo/lbry.c \
+  algo/luffa/sph_luffa.c \
   algo/luffa/luffa.c \
-  algo/luffa/sse2/luffa_for_sse2.c \
+  algo/luffa/luffa_for_sse2.c \
+  algo/luffa/luffa-hash-2way.c \
   algo/lyra2/lyra2.c \
   algo/lyra2/sponge.c \
+  algo/lyra2/lyra2rev2-gate.c \
   algo/lyra2/lyra2rev2.c \
+  algo/lyra2/lyra2rev2-4way.c \
   algo/lyra2/lyra2re.c \
-  algo/lyra2/zcoin.c \
+  algo/lyra2/lyra2z-gate.c \
+  algo/lyra2/lyra2z.c \
+  algo/lyra2/lyra2z-4way.c \
   algo/lyra2/lyra2z330.c \
-  algo/keccak/sse2/keccak.c \
+  algo/lyra2/lyra2h-gate.c \
+  algo/lyra2/lyra2h.c \
+  algo/lyra2/lyra2h-4way.c \
   algo/m7m.c \
-  algo/neoscrypt.c \
-  algo/nist5.c \
+  algo/neoscrypt/neoscrypt.c \
+  algo/nist5/nist5-gate.c \
+  algo/nist5/nist5-4way.c \
+  algo/nist5/nist5.c \
+  algo/nist5/zr5.c \
   algo/pluck.c \
+  algo/quark/quark-gate.c \
   algo/quark/quark.c \
+  algo/quark/quark-4way.c \
+  algo/quark/anime-gate.c \
+  algo/quark/anime.c \
+  algo/quark/anime-4way.c \
+  algo/qubit/qubit-gate.c \
   algo/qubit/qubit.c \
+  algo/qubit/qubit-2way.c \
+  algo/qubit/deep-gate.c \
+  algo/qubit/deep-2way.c \
   algo/qubit/deep.c \
   algo/ripemd/sph_ripemd.c \
   algo/scrypt.c \
   algo/scryptjane/scrypt-jane.c \
+  algo/sha/sph_sha2.c \
+  algo/sha/sph_sha2big.c \
+  algo/sha/sha2-hash-4way.c \
   algo/sha/sha2.c \
   algo/sha/sha256t.c \
-  algo/simd/sse2/nist.c \
-  algo/simd/sse2/vector.c \
+  algo/shabal/sph_shabal.c \
+  algo/shabal/shabal-hash-4way.c \
+  algo/shavite/sph_shavite.c \
+  algo/shavite/sph-shavite-aesni.c \
+  algo/shavite/shavite.c \
+  algo/simd/sph_simd.c \
+  algo/simd/nist.c \
+  algo/simd/vector.c \
+  algo/simd/simd-hash-2way.c \
+  algo/skein/sph_skein.c \
+  algo/skein/skein-hash-4way.c \
   algo/skein/skein.c \
+  algo/skein/skein-4way.c \
+  algo/skein/skein-gate.c \
   algo/skein/skein2.c \
-  algo/s3.c \
+  algo/skein/skein2-4way.c \
+  algo/skein/skein2-gate.c \
+  algo/sm3/sm3.c \
+  algo/sm3/sm3-hash-4way.c \
   algo/tiger/sph_tiger.c \
-  algo/timetravel.c \
-  algo/timetravel10.c \
-  algo/veltor.c \
+  algo/whirlpool/sph_whirlpool.c \
+  algo/whirlpool/whirlpool-hash-4way.c \
+  algo/whirlpool/whirlpool-gate.c \
+  algo/whirlpool/whirlpool-4way.c \
   algo/whirlpool/whirlpool.c \
   algo/whirlpool/whirlpoolx.c \
+  algo/x11/x11-gate.c \
   algo/x11/x11.c \
-  algo/x11/x11evo.c \
+  algo/x11/x11-4way.c \
+  algo/x11/x11gost-gate.c \
   algo/x11/x11gost.c \
+  algo/x11/x11gost-4way.c \
+  algo/x11/c11-gate.c \
   algo/x11/c11.c \
+  algo/x11/c11-4way.c \
+  algo/x11/tribus-gate.c \
+  algo/x11/tribus.c \
+  algo/x11/tribus-4way.c \
+  algo/x11/timetravel-gate.c \
+  algo/x11/timetravel.c \
+  algo/x11/timetravel-4way.c \
+  algo/x11/timetravel10-gate.c \
+  algo/x11/timetravel10.c \
+  algo/x11/timetravel10-4way.c \
+  algo/x11/fresh.c \
+  algo/x11/x11evo.c \
+  algo/x11/x11evo-4way.c \
+  algo/x11/x11evo-gate.c \
+  algo/x13/x13-gate.c \
   algo/x13/x13.c \
+  algo/x13/x13-4way.c \
+  algo/x13/x13sm3-gate.c \
+  algo/x13/x13sm3.c \
+  algo/x13/x13sm3-4way.c \
+  algo/x13/phi1612-gate.c \
+  algo/x13/phi1612.c \
+  algo/x13/phi1612-4way.c \
+  algo/x13/skunk-gate.c \
+  algo/x13/skunk-4way.c \
+  algo/x13/skunk.c \
+  algo/x13/drop.c \
+  algo/x14/x14-gate.c \
   algo/x14/x14.c \
+  algo/x14/x14-4way.c \
+  algo/x14/veltor-gate.c \
+  algo/x14/veltor.c \
+  algo/x14/veltor-4way.c \
+  algo/x14/polytimos-gate.c \
+  algo/x14/polytimos.c \
+  algo/x14/polytimos-4way.c \
+  algo/x14/axiom.c \
+  algo/x15/x15-gate.c \
   algo/x15/x15.c \
+  algo/x15/x15-4way.c \
+  algo/x17/x17-gate.c \
   algo/x17/x17.c \
-  algo/xevan.c \
+  algo/x17/x17-4way.c \
+  algo/x17/xevan-gate.c \
+  algo/x17/xevan.c \
+  algo/x17/xevan-4way.c \
+  algo/x17/x16r-gate.c \
+  algo/x17/x16r.c \
+  algo/x17/x16r-4way.c \
+  algo/x17/hmq1725.c \
   algo/yescrypt/yescrypt.c \
-  algo/yescrypt/yescrypt-common.c \
-  algo/yescrypt/sha256_Y.c\
-  algo/yescrypt/yescrypt-simd.c\
-  algo/zr5.c
-
+  algo/yescrypt/sha256_Y.c \
+  algo/yescrypt/yescrypt-simd.c
 
 disable_flags =
 

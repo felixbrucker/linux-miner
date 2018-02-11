@@ -12,6 +12,12 @@
  #endif
 //#endif
 
+//#if defined(FOUR_WAY) && defined(__AVX2__)
+// keep this until all algos remove reference to HASH_4WAY
+//#if defined(__AVX2__)
+//  #define HASH_4WAY
+//#endif
+
 #ifdef _MSC_VER
 
 #undef USE_ASM  /* to fix */
@@ -74,10 +80,10 @@ void *alloca (size_t);
 # endif
 //#endif
 
-//#ifdef HAVE_SYSLOG_H
-//#include <syslog.h>
-//#define LOG_BLUE 0x10 /* unique value */
-//#else
+#ifdef HAVE_SYSLOG_H
+#include <syslog.h>
+#define LOG_BLUE 0x10 /* unique value */
+#else
 enum {
 	LOG_ERR,
 	LOG_WARNING,
@@ -87,7 +93,7 @@ enum {
 	/* custom notices */
 	LOG_BLUE = 0x10,
 };
-//#endif
+#endif
 
 static inline bool is_windows(void)
 {
@@ -332,7 +338,7 @@ bool   has_xop();
 bool   has_fma3();
 bool   has_sse42();
 bool   has_sse();
-void   cpu_bestcpu_feature( char *outbuf, size_t maxsz );
+void   cpu_bestfeature( char *outbuf, size_t maxsz );
 void   cpu_getname(char *outbuf, size_t maxsz);
 void   cpu_getmodelid(char *outbuf, size_t maxsz);
 void   cpu_brand_string( char* s );
@@ -354,6 +360,8 @@ struct work {
 	char *job_id;
 	size_t xnonce2_len;
 	unsigned char *xnonce2;
+        uint32_t nonces[8];
+        bool     nfound[8];
 };
 
 struct stratum_job {
@@ -475,6 +483,7 @@ uint32_t* get_stratum_job_ntime();
 
 enum algos {
         ALGO_NULL,
+        ALGO_ANIME,
         ALGO_ARGON2,
         ALGO_AXIOM,       
         ALGO_BASTION,
@@ -497,8 +506,10 @@ enum algos {
         ALGO_HODL,
         ALGO_JHA,
         ALGO_KECCAK,
+        ALGO_KECCAKC,
         ALGO_LBRY,
         ALGO_LUFFA,       
+        ALGO_LYRA2H,
         ALGO_LYRA2RE,       
         ALGO_LYRA2REV2,   
         ALGO_LYRA2Z,
@@ -508,7 +519,9 @@ enum algos {
         ALGO_NEOSCRYPT,
         ALGO_NIST5,       
         ALGO_PENTABLAKE,  
+        ALGO_PHI1612,
         ALGO_PLUCK,       
+        ALGO_POLYTIMOS,
         ALGO_QUARK,
         ALGO_QUBIT,       
         ALGO_SCRYPT,
@@ -518,9 +531,10 @@ enum algos {
         ALGO_SHAVITE3,    
         ALGO_SKEIN,       
         ALGO_SKEIN2,      
-        ALGO_S3,          
+        ALGO_SKUNK,
         ALGO_TIMETRAVEL,
         ALGO_TIMETRAVEL10,
+        ALGO_TRIBUS,
         ALGO_VANILLA,
         ALGO_VELTOR,
         ALGO_WHIRLPOOL,
@@ -529,16 +543,21 @@ enum algos {
         ALGO_X11EVO,         
         ALGO_X11GOST,
         ALGO_X13,         
+        ALGO_X13SM3,
         ALGO_X14,        
         ALGO_X15,       
+        ALGO_X16R,
         ALGO_X17,
         ALGO_XEVAN,
         ALGO_YESCRYPT,
+        ALGO_YESCRYPTR8,
+        ALGO_YESCRYPTR16,
         ALGO_ZR5,
         ALGO_COUNT
 };
 static const char* const algo_names[] = {
         NULL,
+        "anime",
         "argon2",
         "axiom",
         "bastion",
@@ -561,8 +580,10 @@ static const char* const algo_names[] = {
         "hodl",
         "jha",
         "keccak",
+        "keccakc",
         "lbry",
         "luffa",
+        "lyra2h",
         "lyra2re",
         "lyra2rev2",
         "lyra2z",
@@ -572,7 +593,9 @@ static const char* const algo_names[] = {
         "neoscrypt",
         "nist5",
         "pentablake",
+        "phi1612",
         "pluck",
+        "polytimos",
         "quark",
         "qubit",
         "scrypt",
@@ -582,9 +605,10 @@ static const char* const algo_names[] = {
         "shavite3",
         "skein",
         "skein2",
-        "s3",
+        "skunk",
         "timetravel",
         "timetravel10",
+        "tribus",
         "vanilla",
         "veltor",
         "whirlpool",
@@ -593,11 +617,15 @@ static const char* const algo_names[] = {
         "x11evo",
         "x11gost",
         "x13",
+        "x13sm3",
         "x14",
         "x15",
+        "x16r",
         "x17",
         "xevan",
         "yescrypt",
+        "yescryptr8",
+        "yescryptr16",
         "zr5",
         "\0"
 };
@@ -658,29 +686,32 @@ static char const usage[] = "\
 Usage: " PACKAGE_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the algorithm to use\n\
+                          anime        Animecoin (ANI)\n\
                           argon2\n\
                           axiom        Shabal-256 MemoHash\n\
                           bastion\n\
-                          blake        Blake-256 (SFR)\n\
+                          blake        blake256r14 (SFR)\n\
                           blakecoin    blake256r8\n\
                           blake2s      Blake-2 S\n\
                           bmw          BMW 256\n\
                           c11          Chaincoin\n\
                           cryptolight  Cryptonight-light\n\
                           cryptonight  cryptonote, Monero (XMR)\n\
-                          decred\n\
+                          decred       Blake256r14dcr\n\
                           deep         Deepcoin (DCN)\n\
                           dmd-gr       Diamond\n\
                           drop         Dropcoin\n\
                           fresh        Fresh\n\
-                          groestl      dmd-gr, Groestl coin\n\
+                          groestl      Groestl coin\n\
                           heavy        Heavy\n\
                           hmq1725      Espers\n\
                           hodl         Hodlcoin\n\
                           jha          jackppot (Jackpotcoin)\n\
-                          keccak       Keccak\n\
+                          keccak       Maxcoin\n\
+                          keccakc      Creative Coin\n\
                           lbry         LBC, LBRY Credits\n\
                           luffa        Luffa\n\
+                          lyra2h       Hppcoin\n\
                           lyra2re      lyra2\n\
                           lyra2rev2    lyrav2, Vertcoin\n\
                           lyra2z       Zcoin (XZC)\n\
@@ -689,8 +720,10 @@ Options:\n\
                           myr-gr       Myriad-Groestl\n\
                           neoscrypt    NeoScrypt(128, 2, 1)\n\
                           nist5        Nist5\n\
+                          pentablake   5 x blake512\n\
+                          phi1612      phi, LUX coin\n\
                           pluck        Pluck:128 (Supcoin)\n\
-                          pentablake   Pentablake\n\
+                          polytimos\n\
                           quark        Quark\n\
                           qubit        Qubit\n\
                           scrypt       scrypt(1024, 1, 1) (default)\n\
@@ -701,21 +734,27 @@ Options:\n\
                           shavite3     Shavite3\n\
                           skein        Skein+Sha (Skeincoin)\n\
                           skein2       Double Skein (Woodcoin)\n\
+                          skunk        Signatum (SIGT)\n\
                           timetravel   timeravel8, Machinecoin (MAC)\n\
                           timetravel10 Bitcore (BTX)\n\
+                          tribus       Denarius (DNR)\n\
                           vanilla      blake256r8vnl (VCash)\n\
                           veltor\n\
                           whirlpool\n\
                           whirlpoolx\n\
                           x11          Dash\n\
-                          x11evo       Revolvercoin\n\
+                          x11evo       Revolvercoin (XRE)\n\
                           x11gost      sib (SibCoin)\n\
                           x13          X13\n\
+                          x13sm3       hsr (Hshare)\n\
                           x14          X14\n\
                           x15          X15\n\
+                          x16r         Ravencoin (RVN)\n\
                           x17\n\
-                          xevan        Bitsend\n\
-                          yescrypt\n\
+                          xevan        Bitsend (BSD)\n\
+                          yescrypt     Globlboost-Y (BSTY)\n\
+                          yescryptr8   BitZeny (ZNY)\n\
+                          yescryptr16  Yenten (YTN)\n\
                           zr5          Ziftr\n\
   -o, --url=URL         URL of mining server\n\
   -O, --userpass=U:P    username:password pair for mining server\n\

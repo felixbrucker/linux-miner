@@ -3,16 +3,13 @@
  * tpruvot@github 2015-2016
  */
 
-#include "miner.h"
 #include "algo-gate-api.h"
 #include <string.h>
 #include <stdint.h>
-
 #include "algo/blake/sph_blake2b.h"
 
-
-static __thread sph_blake2b_ctx s_midstate;
-static __thread sph_blake2b_ctx s_ctx;
+//static __thread sph_blake2b_ctx s_midstate;
+//static __thread sph_blake2b_ctx s_ctx;
 #define MIDLEN 76
 #define A 64
 
@@ -28,6 +25,7 @@ void blake2b_hash(void *output, const void *input)
 	memcpy(output, hash, 32);
 }
 
+/*
 static void blake2b_hash_end(uint32_t *output, const uint32_t *input)
 {
 	s_ctx.outlen = MIDLEN;
@@ -35,6 +33,7 @@ static void blake2b_hash_end(uint32_t *output, const uint32_t *input)
 	sph_blake2b_update(&s_ctx, (uint8_t*) &input[MIDLEN/4], 80 - MIDLEN);
 	sph_blake2b_final(&s_ctx, (uint8_t*) output);
 }
+*/
 
 int scanhash_blake2b( int thr_id, struct work *work, uint32_t max_nonce,
                       uint64_t *hashes_done )
@@ -220,6 +219,8 @@ bool register_blake2b_algo( algo_gate_t* gate )
   gate->hash                  = (void*)&blake2b_hash;
   gate->calc_network_diff     = (void*)&blake2b_calc_network_diff;
   gate->build_stratum_request = (void*)&blake2b_be_build_stratum_request;
+  gate->work_decode           = (void*)&std_be_work_decode;
+  gate->submit_getwork_result = (void*)&std_be_submit_getwork_result;
   gate->build_extraheader     = (void*)&blake2b_build_extraheader;
   gate->get_new_work          = (void*)&blake2b_get_new_work;
   gate->get_max64             = (void*)&blake2b_get_max64;

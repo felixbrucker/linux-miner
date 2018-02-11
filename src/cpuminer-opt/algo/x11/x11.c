@@ -1,6 +1,5 @@
 #include "cpuminer-config.h"
-#include "miner.h"
-#include "algo-gate-api.h"
+#include "x11-gate.h"
 
 #include <string.h>
 #include <stdint.h>
@@ -11,10 +10,8 @@
 #include "algo/jh/sph_jh.h"
 #include "algo/keccak/sph_keccak.h"
 #include "algo/skein/sph_skein.h"
-#include "algo/luffa/sph_luffa.h"
 #include "algo/cubehash/sph_cubehash.h"
 #include "algo/shavite/sph_shavite.h"
-#include "algo/simd/sph_simd.h"
 #include "algo/echo/sph_echo.h"
 
 #ifndef NO_AES_NI
@@ -22,9 +19,9 @@
   #include "algo/echo/aes_ni/hash_api.h"
 #endif
 
-#include "algo/luffa/sse2/luffa_for_sse2.h"
+#include "algo/luffa/luffa_for_sse2.h"
 #include "algo/cubehash/sse2/cubehash_sse2.h"
-#include "algo/simd/sse2/nist.h"
+#include "algo/simd/nist.h"
 #include "algo/blake/sse2/blake.c"  
 #include "algo/keccak/sse2/keccak.c"
 #include "algo/bmw/sse2/bmw.c"
@@ -62,7 +59,7 @@ void init_x11_ctx()
 #endif
 }
 
-static void x11_hash( void *state, const void *input )
+void x11_hash( void *state, const void *input )
 {
      unsigned char hash[128] __attribute__ ((aligned (32)));
      unsigned char hashbuf[128] __attribute__ ((aligned (16)));
@@ -180,6 +177,7 @@ int scanhash_x11( int thr_id, struct work *work, uint32_t max_nonce,
                  if ( fulltest( hash64, ptarget ) )
                  {
                     *hashes_done = n - first_nonce + 1;
+                    work_set_target_ratio( work, hash64 );
                     return true;
                  }
               }
@@ -190,14 +188,3 @@ int scanhash_x11( int thr_id, struct work *work, uint32_t max_nonce,
         pdata[19] = n;
         return 0;
 }
-
-bool register_x11_algo( algo_gate_t* gate )
-{
-  gate->optimizations = SSE2_OPT | AES_OPT | AVX_OPT | AVX2_OPT;
-  init_x11_ctx();
-  gate->scanhash  = (void*)&scanhash_x11;
-  gate->hash      = (void*)&x11_hash;
-  gate->get_max64 = (void*)&get_max64_0x3ffff;
-  return true;
-};
-

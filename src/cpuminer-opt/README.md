@@ -16,6 +16,7 @@ See file RELEASE_NOTES for change log and compile instructions.
 Supported Algorithms
 --------------------
 
+                          anime        Animecoin
                           argon2
                           axiom        Shabal-256 MemoHash
                           bastion
@@ -35,20 +36,24 @@ Supported Algorithms
                           heavy        Heavy
                           hmq1725      Espers
                           hodl         Hodlcoin
-                          jha          jackpotcoin
-                          keccak       Keccak
+                          jha          Jackpotcoin
+                          keccak       Maxcoin
+                          keccakc      Creative coin
                           lbry         LBC, LBRY Credits
                           luffa        Luffa
+                          lyra2h       Hppcoin
                           lyra2re      lyra2
-                          lyra2rev2    lyrav2, Vertcoin
+                          lyra2rev2    lyra2v2, Vertcoin
                           lyra2z       Zcoin (XZC)
                           lyra2z330    Lyra2 330 rows, Zoin (ZOI)
                           m7m          Magi (XMG)
                           myr-gr       Myriad-Groestl
                           neoscrypt    NeoScrypt(128, 2, 1)
                           nist5        Nist5
-                          pluck        Pluck:128 (Supcoin)
                           pentablake   Pentablake
+                          phi1612      phi, LUX coin
+                          pluck        Pluck:128 (Supcoin)
+                          polytimos    Ninja
                           quark        Quark
                           qubit        Qubit
                           scrypt       scrypt(1024, 1, 1) (default)
@@ -59,21 +64,27 @@ Supported Algorithms
                           shavite3     Shavite3
                           skein        Skein+Sha (Skeincoin)
                           skein2       Double Skein (Woodcoin)
+                          skunk        Signatum (SIGT)
                           timetravel   Machinecoin (MAC)
                           timetravel10 Bitcore
+                          tribus       Denarius (DNR)
                           vanilla      blake256r8vnl (VCash)
-                          veltor
+                          veltor       (VLT)
                           whirlpool
                           whirlpoolx
                           x11          Dash
                           x11evo       Revolvercoin
                           x11gost      sib (SibCoin)
                           x13          X13
+                          x13sm3       hsr (Hshare)
                           x14          X14
                           x15          X15
+                          x16r         Ravencoin
                           x17
                           xevan        Bitsend
-                          yescrypt
+                          yescrypt     Globalboost-Y (BSTY)
+                          yescryptr8   BitZeny (ZNY)\n\
+                          yescryptr16  Yenten (YTN)
                           zr5          Ziftr
 
 Requirements
@@ -88,13 +99,16 @@ algoritms for CPUs with AVX and AVX2, Sandybridge and Haswell respectively.
 Older CPUs are supported by cpuminer-multi by TPruvot but at reduced
 performance.
 
+ARM CPUs are not supported.
+
 2. 64 bit Linux OS. Ubuntu and Fedora based distributions, including Mint and
 Centos are known to work and have all dependencies in their repositories.
 Others may work but may require more effort.
 64 bit Windows OS is supported with mingw_w64 and msys or pre-built binaries.
 
-3. Stratum pool, cpuminer-opt only supports stratum minning. Some algos
-may work wallet mining but there are no guarantees.
+MacOS, OSx is not supported.
+
+3. Stratum pool. Some algos may work wallet mining using getwork.
 
 Errata
 ------
@@ -117,13 +131,20 @@ forum at:
 
 https://bitcointalk.org/index.php?topic=1326803.0
 
+All problem reports must be accompanied by a proper definition.
+This should include how the problem occurred, the command line and
+output from the miner showing the startup and any errors.
+
 Donations
 ---------
 
-I do not do this for money but I have a donation address if users
-are so inclined.
+cpuminer-opt has no fees of any kind but donations are accepted.
 
-bitcoin:12tdvfF7KmAsihBXQXynT6E6th2c2pByTT?label=donations
+BTC: 12tdvfF7KmAsihBXQXynT6E6th2c2pByTT
+ETH: 0x72122edabcae9d3f57eab0729305a425f6fef6d0
+LTC: LdUwoHJnux9r9EKqFWNvAi45kQompHk6e8
+BCH: 1QKYkB6atn4P7RFozyziAXLEnurwnUM1cQ
+BTG: GVUyECtRHeC5D58z9F3nGGfVQndwnsPnHQ
 
 Happy mining!
 

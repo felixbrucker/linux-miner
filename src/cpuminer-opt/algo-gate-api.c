@@ -16,7 +16,7 @@
 #include <memory.h>
 #include <unistd.h>
 #include <openssl/sha.h>
-#include "miner.h"
+//#include "miner.h"
 #include "algo-gate-api.h"
 
 // Define null and standard functions.
@@ -77,6 +77,12 @@ void algo_not_tested()
   applog(LOG_WARNING,"and bad things may happen. Use at your own risk.");
 }
 
+void four_way_not_tested()
+{
+  applog( LOG_WARNING,"Algo %s has not been tested using 4way. It may not", algo_names[opt_algo] );
+  applog( LOG_WARNING,"work or may be slower. Please report your results.");
+}
+
 void algo_not_implemented()
 {
   applog(LOG_ERR,"Algo %s has not been Implemented.",algo_names[opt_algo]);
@@ -114,8 +120,8 @@ void init_algo_gate( algo_gate_t* gate )
    gate->stratum_gen_work        = (void*)&std_stratum_gen_work;
    gate->build_stratum_request   = (void*)&std_le_build_stratum_request;
    gate->set_target              = (void*)&std_set_target;
-   gate->work_decode             = (void*)&std_work_decode;
-   gate->submit_getwork_result   = (void*)&std_submit_getwork_result;
+   gate->work_decode             = (void*)&std_le_work_decode;
+   gate->submit_getwork_result   = (void*)&std_le_submit_getwork_result;
    gate->build_extraheader       = (void*)&std_build_extraheader;
    gate->set_work_data_endian    = (void*)&do_nothing;
    gate->calc_network_diff       = (void*)&std_calc_network_diff;
@@ -124,13 +130,17 @@ void init_algo_gate( algo_gate_t* gate )
    gate->do_this_thread          = (void*)&return_true;
    gate->longpoll_rpc_call       = (void*)&std_longpoll_rpc_call;
    gate->stratum_handle_response = (void*)&std_stratum_handle_response;
-   gate->optimizations           = SSE2_OPT;
+   gate->optimizations           = EMPTY_SET;
    gate->ntime_index             = STD_NTIME_INDEX;
    gate->nbits_index             = STD_NBITS_INDEX;
    gate->nonce_index             = STD_NONCE_INDEX;
    gate->work_data_size          = STD_WORK_DATA_SIZE;
    gate->work_cmp_size           = STD_WORK_CMP_SIZE;
 }
+
+// Ignore warnings for not yet defined register functions
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
 
 // called by each thread that uses the gate
 bool register_algo_gate( int algo, algo_gate_t *gate )
@@ -145,11 +155,7 @@ bool register_algo_gate( int algo, algo_gate_t *gate )
 
    switch (algo)
    {
-
-// Ignore warnings for not yet defined register fucntions
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wimplicit-function-declaration"
-
+     case ALGO_ANIME:        register_anime_algo       ( gate ); break;
      case ALGO_ARGON2:       register_argon2_algo      ( gate ); break;
      case ALGO_AXIOM:        register_axiom_algo       ( gate ); break;
      case ALGO_BASTION:      register_bastion_algo     ( gate ); break;
@@ -171,18 +177,22 @@ bool register_algo_gate( int algo, algo_gate_t *gate )
      case ALGO_HODL:         register_hodl_algo        ( gate ); break;
      case ALGO_JHA:          register_jha_algo         ( gate ); break;
      case ALGO_KECCAK:       register_keccak_algo      ( gate ); break;
+     case ALGO_KECCAKC:      register_keccakc_algo     ( gate ); break;
      case ALGO_LBRY:         register_lbry_algo        ( gate ); break;
      case ALGO_LUFFA:        register_luffa_algo       ( gate ); break;
+     case ALGO_LYRA2H:       register_lyra2h_algo      ( gate ); break;
      case ALGO_LYRA2RE:      register_lyra2re_algo     ( gate ); break;
      case ALGO_LYRA2REV2:    register_lyra2rev2_algo   ( gate ); break;
-     case ALGO_LYRA2Z:       register_zcoin_algo       ( gate ); break;
+     case ALGO_LYRA2Z:       register_lyra2z_algo      ( gate ); break;
      case ALGO_LYRA2Z330:    register_lyra2z330_algo   ( gate ); break;
      case ALGO_M7M:          register_m7m_algo         ( gate ); break;
      case ALGO_MYR_GR:       register_myriad_algo      ( gate ); break;
      case ALGO_NEOSCRYPT:    register_neoscrypt_algo   ( gate ); break;
      case ALGO_NIST5:        register_nist5_algo       ( gate ); break;
      case ALGO_PENTABLAKE:   register_pentablake_algo  ( gate ); break;
+     case ALGO_PHI1612:      register_phi1612_algo     ( gate ); break;
      case ALGO_PLUCK:        register_pluck_algo       ( gate ); break;
+     case ALGO_POLYTIMOS:    register_polytimos_algo   ( gate ); break;
      case ALGO_QUARK:        register_quark_algo       ( gate ); break;
      case ALGO_QUBIT:        register_qubit_algo       ( gate ); break;
      case ALGO_SCRYPT:       register_scrypt_algo      ( gate ); break;
@@ -192,27 +202,28 @@ bool register_algo_gate( int algo, algo_gate_t *gate )
      case ALGO_SHAVITE3:     register_shavite_algo     ( gate ); break;
      case ALGO_SKEIN:        register_skein_algo       ( gate ); break;
      case ALGO_SKEIN2:       register_skein2_algo      ( gate ); break;
-     case ALGO_S3:           register_s3_algo          ( gate ); break;
+     case ALGO_SKUNK:        register_skunk_algo       ( gate ); break;
      case ALGO_TIMETRAVEL:   register_timetravel_algo  ( gate ); break;
      case ALGO_TIMETRAVEL10: register_timetravel10_algo( gate ); break;
+     case ALGO_TRIBUS:       register_tribus_algo      ( gate ); break;
      case ALGO_VANILLA:      register_vanilla_algo     ( gate ); break;
      case ALGO_VELTOR:       register_veltor_algo      ( gate ); break;
      case ALGO_WHIRLPOOL:    register_whirlpool_algo   ( gate ); break;
      case ALGO_WHIRLPOOLX:   register_whirlpoolx_algo  ( gate ); break;
      case ALGO_X11:          register_x11_algo         ( gate ); break;
      case ALGO_X11EVO:       register_x11evo_algo      ( gate ); break;
-     case ALGO_X11GOST:      register_sib_algo         ( gate ); break;
+     case ALGO_X11GOST:      register_x11gost_algo     ( gate ); break;
      case ALGO_X13:          register_x13_algo         ( gate ); break;
+     case ALGO_X13SM3:       register_x13sm3_algo      ( gate ); break;
      case ALGO_X14:          register_x14_algo         ( gate ); break;
      case ALGO_X15:          register_x15_algo         ( gate ); break;
+     case ALGO_X16R:         register_x16r_algo        ( gate ); break;
      case ALGO_X17:          register_x17_algo         ( gate ); break;
      case ALGO_XEVAN:        register_xevan_algo       ( gate ); break;
      case ALGO_YESCRYPT:     register_yescrypt_algo    ( gate ); break;
+     case ALGO_YESCRYPTR8:   register_yescryptr8_algo  ( gate ); break;
+     case ALGO_YESCRYPTR16:  register_yescryptr16_algo ( gate ); break;
      case ALGO_ZR5:          register_zr5_algo         ( gate ); break;
-
-// restore warnings
-#pragma GCC diagnostic pop
-
     default:
         applog(LOG_ERR,"FAIL: algo_gate registration failed, unknown algo %s.\n", algo_names[opt_algo] );
         return false;
@@ -226,6 +237,9 @@ bool register_algo_gate( int algo, algo_gate_t *gate )
   }
   return true;
 }
+
+// restore warnings
+#pragma GCC diagnostic pop
 
 // override std defaults with jr2 defaults
 bool register_json_rpc2( algo_gate_t *gate )
@@ -267,6 +281,7 @@ const char* const algo_alias_map[][2] =
 {
 //   alias                proper
   { "bitcore",           "timetravel10" },
+  { "bitzeny",           "yescryptr8"   },
   { "blake256r8",        "blakecoin"    },
   { "blake256r8vnl",     "vanilla"      },
   { "blake256r14",       "blake"        },
@@ -277,6 +292,7 @@ const char* const algo_alias_map[][2] =
   { "droplp",            "drop"         },
   { "espers",            "hmq1725"      },
   { "flax",              "c11"          },
+  { "hsr",               "x13sm3"       },
   { "jackpot",           "jha"          },
   { "jane",              "scryptjane"   }, 
   { "lyra2",             "lyra2re"      },
@@ -284,11 +300,13 @@ const char* const algo_alias_map[][2] =
   { "lyra2zoin",         "lyra2z330"    },
   { "myriad",            "myr-gr"       },
   { "neo",               "neoscrypt"    },
+  { "phi",               "phi1612"      },
 //  { "sia",               "blake2b"      },
   { "sib",               "x11gost"      },
   { "timetravel8",       "timetravel"   },
-  { "yes",               "yescrypt"     },
   { "ziftr",             "zr5"          },
+  { "yenten",            "yescryptr16"  },
+  { "yescryptr8k",       "yescrypt"     },
   { "zcoin",             "lyra2z"       },
   { "zoin",              "lyra2z330"    },
   { NULL,                NULL           }   

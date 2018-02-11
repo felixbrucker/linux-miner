@@ -1,16 +1,13 @@
-#include "miner.h"
 #include "algo-gate-api.h"
 
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
-
 #include "sph_sha2.h"
+#include <openssl/sha.h>
 
-#if defined __SHA__
- #include <openssl/sha.h>
-
+#ifndef USE_SPH_SHA
  static SHA256_CTX sha256t_ctx __attribute__ ((aligned (64)));
  static __thread SHA256_CTX sha256t_mid  __attribute__ ((aligned (64)));
 #else
@@ -21,7 +18,7 @@
 void sha256t_midstate( const void* input )
 {
     memcpy( &sha256t_mid, &sha256t_ctx, sizeof sha256t_mid );
-#if defined __SHA__
+#ifndef USE_SPH_SHA
     SHA256_Update( &sha256t_mid, input, 64 );
 #else
     sph_sha256( &sha256t_mid, input, 64 );
@@ -34,20 +31,20 @@ void sha256t_hash(void* output, const void* input,  uint32_t len)
         const int midlen = 64;            // bytes
         const int tail   = 80 - midlen;   // 16
 
-#if defined __SHA__
+#ifndef USE_SPH_SHA 
         SHA256_CTX ctx_sha256 __attribute__ ((aligned (64)));
         memcpy( &ctx_sha256, &sha256t_mid, sizeof sha256t_mid );
 
         SHA256_Update( &ctx_sha256, input + midlen, tail );
-        SHA256_Final( hashA, &ctx_sha256 );
+        SHA256_Final( (unsigned char*)hashA, &ctx_sha256 );
 
         memcpy( &ctx_sha256, &sha256t_ctx, sizeof sha256t_ctx );
         SHA256_Update( &ctx_sha256, hashA, 32 );
-        SHA256_Final( hashA, &ctx_sha256 );
+        SHA256_Final( (unsigned char*)hashA, &ctx_sha256 );
 
         memcpy( &ctx_sha256, &sha256t_ctx, sizeof sha256t_ctx );
         SHA256_Update( &ctx_sha256, hashA, 32 );
-        SHA256_Final( hashA, &ctx_sha256 );
+        SHA256_Final( (unsigned char*)hashA, &ctx_sha256 );
 #else
         sph_sha256_context ctx_sha256 __attribute__ ((aligned (64)));
         memcpy( &ctx_sha256, &sha256t_mid, sizeof sha256t_mid );
@@ -150,12 +147,12 @@ void sha256t_set_target( struct work* work, double job_diff )
 
 bool register_sha256t_algo( algo_gate_t* gate )
 {
-#if defined __SHA__
+#ifndef USE_SPH_SHA
     SHA256_Init( &sha256t_ctx );
 #else
     sph_sha256_init( &sha256t_ctx );
 #endif
-    gate->optimizations = SSE2_OPT | SHA_OPT;
+    gate->optimizations = SSE2_OPT | AVX_OPT | AVX2_OPT | SHA_OPT;
     gate->scanhash   = (void*)&scanhash_sha256t;
     gate->hash       = (void*)&sha256t_hash;
     gate->set_target = (void*)&sha256t_set_target;

@@ -27,7 +27,6 @@
  * online backup system.
  */
 
-#include "miner.h"
 #include "algo-gate-api.h"
 
 #include <stdlib.h>
@@ -755,6 +754,7 @@ extern int scanhash_scrypt( int thr_id, struct work *work, uint32_t max_nonce,
 			if (unlikely(hash[i * 8 + 7] <= Htarg && fulltest(hash + i * 8, ptarget))) {
 				*hashes_done = n - pdata[19] + 1;
 				pdata[19] = data[i * 20 + 19];
+                                work_set_target_ratio( work, hash );
 				return 1;
 			}
 		}
@@ -778,9 +778,10 @@ bool scrypt_miner_thread_init( int thr_id )
 
 bool register_scrypt_algo( algo_gate_t* gate )
 {
+  gate->optimizations = SSE2_OPT | AVX_OPT | AVX2_OPT;
   gate->miner_thread_init =(void*)&scrypt_miner_thread_init;
   gate->scanhash         = (void*)&scanhash_scrypt;
-  gate->hash             = (void*)&scrypt_1024_1_1_256_24way;
+//  gate->hash             = (void*)&scrypt_1024_1_1_256_24way;
   gate->set_target       = (void*)&scrypt_set_target;
   gate->get_max64        = (void*)&scrypt_get_max64;
 

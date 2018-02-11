@@ -1,5 +1,4 @@
-#include "miner.h"
-#include "algo-gate-api.h"
+#include "c11-gate.h"
 
 #include <stdlib.h>
 #include <stdint.h>
@@ -23,9 +22,9 @@
   #include "algo/echo/aes_ni/hash_api.h"
 #endif
 
-#include "algo/luffa/sse2/luffa_for_sse2.h"
+#include "algo/luffa/luffa_for_sse2.h"
 #include "algo/cubehash/sse2/cubehash_sse2.h"
-#include "algo/simd/sse2/nist.h"
+#include "algo/simd/nist.h"
 #include "algo/blake/sse2/blake.c"
 #include "algo/keccak/sse2/keccak.c"
 #include "algo/bmw/sse2/bmw.c"
@@ -65,7 +64,7 @@ void init_c11_ctx()
 #endif
 }
 
-void c11hash( void *output, const void *input )
+void c11_hash( void *output, const void *input )
 {
         unsigned char hash[128] _ALIGN(64); // uint32_t hashA[16], hashB[16];
 //	uint32_t _ALIGN(64) hash[16];
@@ -158,12 +157,13 @@ int scanhash_c11( int thr_id, struct work *work, uint32_t max_nonce,
 	do
         {
 		be32enc( &endiandata[19], nonce );
-		c11hash( hash, endiandata );
+		c11_hash( hash, endiandata );
 		if ( hash[7] <= Htarg && fulltest(hash, ptarget) )
                 {
 			pdata[19] = nonce;
 			*hashes_done = pdata[19] - first_nonce;
-			return 1;
+                        work_set_target_ratio( work, hash );
+ 			return 1;
 		}
 		nonce++;
 	} while ( nonce < max_nonce && !(*restart) );
@@ -171,14 +171,4 @@ int scanhash_c11( int thr_id, struct work *work, uint32_t max_nonce,
 	*hashes_done = pdata[19] - first_nonce + 1;
 	return 0;
 }
-
-bool register_c11_algo( algo_gate_t* gate )
-{
-  gate->optimizations = SSE2_OPT | AES_OPT | AVX_OPT | AVX2_OPT;
-  init_c11_ctx();
-  gate->scanhash  = (void*)&scanhash_c11;
-  gate->hash      = (void*)&c11hash;
-  gate->get_max64 = (void*)&get_max64_0x3ffff;
-  return true;
-};
 

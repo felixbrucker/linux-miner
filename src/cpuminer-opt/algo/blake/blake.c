@@ -1,4 +1,3 @@
-#include "miner.h"
 #include "algo-gate-api.h"
 #include "sph_blake.h"
 
@@ -89,19 +88,4 @@ int scanhash_blake( int thr_id, struct work *work, uint32_t max_nonce,
 	pdata[19] = n;
 	return 0;
 }
-
-// changed to get_max64_0x3fffffLL in cpuminer-multi-decred
-int64_t blake_get_max64 ()
-{
-  return 0x7ffffLL;
-}
-
-bool register_blake_algo( algo_gate_t* gate )
-{
-  gate->scanhash  = (void*)&scanhash_blake;
-  gate->hash      = (void*)&blakehash;
-  gate->get_max64 = (void*)&blake_get_max64;
-  return true;
-}
-
 

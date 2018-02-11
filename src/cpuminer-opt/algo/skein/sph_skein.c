@@ -39,7 +39,6 @@
 extern "C"{
 #endif
 
-
 #if SPH_SMALL_FOOTPRINT && !defined SPH_SMALL_FOOTPRINT_SKEIN
 #define SPH_SMALL_FOOTPRINT_SKEIN   1
 #endif
@@ -883,6 +882,7 @@ skein_big_core(sph_skein_big_context *sc, const void *data, size_t len)
 	}
 
 	READ_STATE_BIG(sc);
+
 	first = (bcount == 0) << 7;
 	do {
 		size_t clen;
