@@ -45,7 +45,10 @@ cpuminer_SOURCES = \
   algo/blake/sph_blake2b.c \
   algo/blake/blake2b.c \
   algo/blake/sph-blake2s.c \
+  algo/blake/blake2s-hash-4way.c \
   algo/blake/blake2s.c \
+  algo/blake/blake2s-gate.c \
+  algo/blake/blake2s-4way.c \
   algo/blake/blakecoin-gate.c \
   algo/blake/mod_blakecoin.c \
   algo/blake/blakecoin.c \
@@ -70,6 +73,8 @@ cpuminer_SOURCES = \
   algo/gost/sph_gost.c \
   algo/groestl/sph_groestl.c \
   algo/groestl/groestl.c \
+  algo/groestl/myrgr-gate.c \
+  algo/groestl/myrgr-4way.c \
   algo/groestl/myr-groestl.c \
   algo/groestl/aes_ni/hash-groestl.c \
   algo/groestl/aes_ni/hash-groestl256.c \
@@ -97,7 +102,6 @@ cpuminer_SOURCES = \
   algo/keccak/keccak-4way.c\
   algo/keccak/keccak-gate.c \
   algo/keccak/sse2/keccak.c \
-  algo/lbry.c \
   algo/luffa/sph_luffa.c \
   algo/luffa/luffa.c \
   algo/luffa/luffa_for_sse2.c \
@@ -115,6 +119,9 @@ cpuminer_SOURCES = \
   algo/lyra2/lyra2h-gate.c \
   algo/lyra2/lyra2h.c \
   algo/lyra2/lyra2h-4way.c \
+  algo/lyra2/allium-gate.c \
+  algo/lyra2/allium-4way.c \
+  algo/lyra2/allium.c \
   algo/m7m.c \
   algo/neoscrypt/neoscrypt.c \
   algo/nist5/nist5-gate.c \
@@ -135,6 +142,10 @@ cpuminer_SOURCES = \
   algo/qubit/deep-2way.c \
   algo/qubit/deep.c \
   algo/ripemd/sph_ripemd.c \
+  algo/ripemd/ripemd-hash-4way.c \
+  algo/ripemd/lbry-gate.c \
+  algo/ripemd/lbry.c \
+  algo/ripemd/lbry-4way.c \
   algo/scrypt.c \
   algo/scryptjane/scrypt-jane.c \
   algo/sha/sph_sha2.c \
@@ -190,6 +201,9 @@ cpuminer_SOURCES = \
   algo/x11/x11evo.c \
   algo/x11/x11evo-4way.c \
   algo/x11/x11evo-gate.c \
+  algo/x12/x12-gate.c \
+  algo/x12/x12.c \
+  algo/x12/x12-4way.c \
   algo/x13/x13-gate.c \
   algo/x13/x13.c \
   algo/x13/x13-4way.c \

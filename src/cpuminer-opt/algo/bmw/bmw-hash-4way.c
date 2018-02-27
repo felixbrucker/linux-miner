@@ -49,13 +49,6 @@ extern "C"{
 
 // BMW256
 
-// BMW small has a bug not present in big. Lanes 0 & 2 produce valid hash
-// while lanes 1 & 3 produce invalid hash. The cause is not known.
-// Some things that could cause it are: using epi64 instead of epi32,
-// a memory write that is the wrong size, an attempt to index a vector
-// like an array (only works for 64 bit elements).  
-
-
 static const sph_u32 IV256[] = {
 	SPH_C32(0x40414243), SPH_C32(0x44454647),
 	SPH_C32(0x48494A4B), SPH_C32(0x4C4D4E4F),
@@ -123,16 +116,14 @@ static const sph_u64 IV512[] = {
    mm_rotl_32( M[ ( (j) + (off) ) & 0xF ] , \
                 ( ( (j) + (off) ) & 0xF ) + 1 )
 
-// The multiplication in this macro is a possible cause of the lane
-// corruption but a vectorized mullo did not help.
 #define add_elt_s( M, H, j ) \
    _mm_xor_si128( \
-      _mm_add_epi32( \
-            _mm_sub_epi32( _mm_add_epi32( rol_off_32( M, j, 0 ), \
-                                          rol_off_32( M, j, 3 ) ), \
-                           rol_off_32( M, j, 10 ) ), \
-            _mm_set1_epi32( ( (j) + 16 ) * 0x05555555UL ) \
-                   ), H[ ( (j)+7 ) & 0xF ] )
+       _mm_add_epi32( \
+             _mm_sub_epi32( _mm_add_epi32( rol_off_32( M, j, 0 ), \
+                                           rol_off_32( M, j, 3 ) ), \
+                            rol_off_32( M, j, 10 ) ), \
+       _mm_set1_epi32( ( (j)+16 ) * SPH_C32(0x05555555UL) ) ), \
+   H[ ( (j)+7 ) & 0xF ] )
 
 
 #define expand1s( qt, M, H, i ) \
@@ -449,22 +440,22 @@ void compress_small( const __m128i *M, const __m128i H[16], __m128i dH[16] )
 {
    __m128i qt[32], xl, xh; \
 
-   qt[ 0] = ss0( Ws0 ) + H[ 1];
-   qt[ 1] = ss1( Ws1 ) + H[ 2];
-   qt[ 2] = ss2( Ws2 ) + H[ 3];
-   qt[ 3] = ss3( Ws3 ) + H[ 4];
-   qt[ 4] = ss4( Ws4 ) + H[ 5];
-   qt[ 5] = ss0( Ws5 ) + H[ 6];
-   qt[ 6] = ss1( Ws6 ) + H[ 7];
-   qt[ 7] = ss2( Ws7 ) + H[ 8];
-   qt[ 8] = ss3( Ws8 ) + H[ 9];
-   qt[ 9] = ss4( Ws9 ) + H[10];
-   qt[10] = ss0( Ws10) + H[11];
-   qt[11] = ss1( Ws11) + H[12];
-   qt[12] = ss2( Ws12) + H[13];
-   qt[13] = ss3( Ws13) + H[14];
-   qt[14] = ss4( Ws14) + H[15];
-   qt[15] = ss0( Ws15) + H[ 0];
+   qt[ 0] = _mm_add_epi32( ss0( Ws0 ), H[ 1] );
+   qt[ 1] = _mm_add_epi32( ss1( Ws1 ), H[ 2] );
+   qt[ 2] = _mm_add_epi32( ss2( Ws2 ), H[ 3] );
+   qt[ 3] = _mm_add_epi32( ss3( Ws3 ), H[ 4] );
+   qt[ 4] = _mm_add_epi32( ss4( Ws4 ), H[ 5] );
+   qt[ 5] = _mm_add_epi32( ss0( Ws5 ), H[ 6] );
+   qt[ 6] = _mm_add_epi32( ss1( Ws6 ), H[ 7] );
+   qt[ 7] = _mm_add_epi32( ss2( Ws7 ), H[ 8] );
+   qt[ 8] = _mm_add_epi32( ss3( Ws8 ), H[ 9] );
+   qt[ 9] = _mm_add_epi32( ss4( Ws9 ), H[10] );
+   qt[10] = _mm_add_epi32( ss0( Ws10), H[11] );
+   qt[11] = _mm_add_epi32( ss1( Ws11), H[12] );
+   qt[12] = _mm_add_epi32( ss2( Ws12), H[13] );
+   qt[13] = _mm_add_epi32( ss3( Ws13), H[14] );
+   qt[14] = _mm_add_epi32( ss4( Ws14), H[15] );
+   qt[15] = _mm_add_epi32( ss0( Ws15), H[ 0] );
    qt[16] = expand1s( qt, M, H, 16 );
    qt[17] = expand1s( qt, M, H, 17 );
    qt[18] = expand2s( qt, M, H, 18 );
@@ -740,24 +731,24 @@ void compress_small( const __m128i *M, const __m128i H[16], __m128i dH[16] )
 
 void compress_big( const __m256i *M, const __m256i H[16], __m256i dH[16] )
 {
-   __m256i qt[32], xl, xh; \
+   __m256i qt[32], xl, xh;
 
-   qt[ 0] = sb0( Wb0 ) + H[ 1]; 
-   qt[ 1] = sb1( Wb1 ) + H[ 2]; 
-   qt[ 2] = sb2( Wb2 ) + H[ 3]; 
-   qt[ 3] = sb3( Wb3 ) + H[ 4]; 
-   qt[ 4] = sb4( Wb4 ) + H[ 5]; 
-   qt[ 5] = sb0( Wb5 ) + H[ 6]; 
-   qt[ 6] = sb1( Wb6 ) + H[ 7]; 
-   qt[ 7] = sb2( Wb7 ) + H[ 8]; 
-   qt[ 8] = sb3( Wb8 ) + H[ 9]; 
-   qt[ 9] = sb4( Wb9 ) + H[10]; 
-   qt[10] = sb0( Wb10) + H[11]; 
-   qt[11] = sb1( Wb11) + H[12]; 
-   qt[12] = sb2( Wb12) + H[13]; 
-   qt[13] = sb3( Wb13) + H[14];
-   qt[14] = sb4( Wb14) + H[15]; 
-   qt[15] = sb0( Wb15) + H[ 0]; 
+   qt[ 0] = _mm256_add_epi64( sb0( Wb0 ), H[ 1] ); 
+   qt[ 1] = _mm256_add_epi64( sb1( Wb1 ), H[ 2] ); 
+   qt[ 2] = _mm256_add_epi64( sb2( Wb2 ), H[ 3] ); 
+   qt[ 3] = _mm256_add_epi64( sb3( Wb3 ), H[ 4] ); 
+   qt[ 4] = _mm256_add_epi64( sb4( Wb4 ), H[ 5] ); 
+   qt[ 5] = _mm256_add_epi64( sb0( Wb5 ), H[ 6] ); 
+   qt[ 6] = _mm256_add_epi64( sb1( Wb6 ), H[ 7] ); 
+   qt[ 7] = _mm256_add_epi64( sb2( Wb7 ), H[ 8] ); 
+   qt[ 8] = _mm256_add_epi64( sb3( Wb8 ), H[ 9] ); 
+   qt[ 9] = _mm256_add_epi64( sb4( Wb9 ), H[10] ); 
+   qt[10] = _mm256_add_epi64( sb0( Wb10), H[11] ); 
+   qt[11] = _mm256_add_epi64( sb1( Wb11), H[12] ); 
+   qt[12] = _mm256_add_epi64( sb2( Wb12), H[13] ); 
+   qt[13] = _mm256_add_epi64( sb3( Wb13), H[14] );
+   qt[14] = _mm256_add_epi64( sb4( Wb14), H[15] ); 
+   qt[15] = _mm256_add_epi64( sb0( Wb15), H[ 0] ); 
    qt[16] = expand1b( qt, M, H, 16 ); 
    qt[17] = expand1b( qt, M, H, 17 ); 
    qt[18] = expand2b( qt, M, H, 18 ); 
@@ -870,7 +861,7 @@ void compress_big( const __m256i *M, const __m256i H[16], __m256i dH[16] )
 } 
 
 // BMW256
-/*
+
 static const uint32_t final_s[16][4] =
 {
    { 0xaaaaaaa0, 0xaaaaaaa0, 0xaaaaaaa0, 0xaaaaaaa0 },
@@ -890,7 +881,7 @@ static const uint32_t final_s[16][4] =
    { 0xaaaaaaae, 0xaaaaaaae, 0xaaaaaaae, 0xaaaaaaae },
    { 0xaaaaaaaf, 0xaaaaaaaf, 0xaaaaaaaf, 0xaaaaaaaf }
 };
-*/
+/*
 static const __m128i final_s[16] =
 {
    { 0xaaaaaaa0aaaaaaa0, 0xaaaaaaa0aaaaaaa0 },
@@ -910,7 +901,7 @@ static const __m128i final_s[16] =
    { 0xaaaaaaaeaaaaaaae, 0xaaaaaaaeaaaaaaae },
    { 0xaaaaaaafaaaaaaaf, 0xaaaaaaafaaaaaaaf }
 };
-
+*/
 static void
 bmw32_4way_init(bmw_4way_small_context *sc, const sph_u32 *iv)
 {

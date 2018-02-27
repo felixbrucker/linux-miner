@@ -37,7 +37,9 @@
 
 #include "sha2-hash-4way.h"
 
-// SHA256 4 way 32 bit
+#include <stdio.h>
+
+// SHA-256 32 bit
 
 static const sph_u32 H256[8] = {
         SPH_C32(0x6A09E667), SPH_C32(0xBB67AE85),
@@ -46,7 +48,7 @@ static const sph_u32 H256[8] = {
         SPH_C32(0x1F83D9AB), SPH_C32(0x5BE0CD19)
 };
 
-static const sph_u32 K256[80] = {
+static const sph_u32 K256[64] = {
         SPH_C32(0x428A2F98), SPH_C32(0x71374491),
         SPH_C32(0xB5C0FBCF), SPH_C32(0xE9B5DBA5),
         SPH_C32(0x3956C25B), SPH_C32(0x59F111F1),
@@ -78,18 +80,14 @@ static const sph_u32 K256[80] = {
         SPH_C32(0x748F82EE), SPH_C32(0x78A5636F),
         SPH_C32(0x84C87814), SPH_C32(0x8CC70208),
         SPH_C32(0x90BEFFFA), SPH_C32(0xA4506CEB),
-        SPH_C32(0xBEF9A3F7), SPH_C32(0xC67178F2),
-        SPH_C32(0xCA273ECE), SPH_C32(0xD186B8C7),
-        SPH_C32(0xEADA7DD6), SPH_C32(0xF57D4F7F),
-        SPH_C32(0x06F067AA), SPH_C32(0x0A637DC5),
-        SPH_C32(0x113F9804), SPH_C32(0x1B710B35),
-        SPH_C32(0x28DB77F5), SPH_C32(0x32CAAB7B),
-        SPH_C32(0x3C9EBE0A), SPH_C32(0x431D67C4),
-        SPH_C32(0x4CC5D4BE), SPH_C32(0x597F299C),
-        SPH_C32(0x5FCB6FAB), SPH_C32(0x6C44198C)
-
+        SPH_C32(0xBEF9A3F7), SPH_C32(0xC67178F2)
 };
 
+// SHA-256 4 way
+
+#define SHA2s_MEXP( a, b, c, d ) \
+     _mm_add_epi32( _mm_add_epi32( _mm_add_epi32( \
+                    SSG2_1( W[a] ), W[b] ), SSG2_0( W[c] ) ), W[d] );
 
 #define CHs(X, Y, Z) \
    _mm_xor_si128( _mm_and_si128( _mm_xor_si128( Y, Z ), X ), Z ) 
@@ -114,29 +112,39 @@ static const sph_u32 K256[80] = {
    _mm_xor_si128( _mm_xor_si128( \
         mm_rotr_32(x, 17), mm_rotr_32(x, 19) ), _mm_srli_epi32(x, 10) )
 
-#define SHA256_4WAY_STEP(A, B, C, D, E, F, G, H, i) \
+#define SHA2s_4WAY_STEP(A, B, C, D, E, F, G, H, i, j) \
 do { \
-  __m128i T1, T2; \
+  register __m128i T1, T2; \
   T1 = _mm_add_epi32( _mm_add_epi32( _mm_add_epi32( \
        _mm_add_epi32( H, BSG2_1(E) ), CHs(E, F, G) ), \
-                         _mm_set1_epi32( K256[i] ) ), W[i] ); \
+                          _mm_set1_epi32( K256[( (j)+(i) )] ) ), W[i] ); \
   T2 = _mm_add_epi32( BSG2_0(A), MAJs(A, B, C) ); \
-  D  = _mm_add_epi32( D, T1 ); \
+  D  = _mm_add_epi32( D,  T1 ); \
   H  = _mm_add_epi32( T1, T2 ); \
 } while (0)
 
 static void
 sha256_4way_round( __m128i *in, __m128i r[8] )
 {
-   int i;
-   __m128i A, B, C, D, E, F, G, H;
-   __m128i W[80];
+   register  __m128i A, B, C, D, E, F, G, H;
+   __m128i W[16];
 
-   for ( i = 0; i < 16; i++ )
-      W[i] = mm_bswap_32( in[i] );
-   for ( i = 16; i < 80; i++ )
-      W[i] = _mm_add_epi32( _mm_add_epi32( _mm_add_epi32(
-           SSG2_1( W[ i-2 ] ), W[ i-7 ] ), SSG2_0( W[ i-15 ] ) ), W[ i-16 ] );
+   W[ 0] = mm_bswap_32( in[ 0] );
+   W[ 1] = mm_bswap_32( in[ 1] );
+   W[ 2] = mm_bswap_32( in[ 2] );
+   W[ 3] = mm_bswap_32( in[ 3] );
+   W[ 4] = mm_bswap_32( in[ 4] );
+   W[ 5] = mm_bswap_32( in[ 5] );
+   W[ 6] = mm_bswap_32( in[ 6] );
+   W[ 7] = mm_bswap_32( in[ 7] );
+   W[ 8] = mm_bswap_32( in[ 8] );
+   W[ 9] = mm_bswap_32( in[ 9] );
+   W[10] = mm_bswap_32( in[10] );
+   W[11] = mm_bswap_32( in[11] );
+   W[12] = mm_bswap_32( in[12] );
+   W[13] = mm_bswap_32( in[13] );
+   W[14] = mm_bswap_32( in[14] );
+   W[15] = mm_bswap_32( in[15] );
 
    A = r[0];
    B = r[1];
@@ -147,16 +155,58 @@ sha256_4way_round( __m128i *in, __m128i r[8] )
    G = r[6];
    H = r[7];
 
-   for ( i = 0; i < 80; i += 8 )
+   SHA2s_4WAY_STEP( A, B, C, D, E, F, G, H,  0, 0 );
+   SHA2s_4WAY_STEP( H, A, B, C, D, E, F, G,  1, 0 );
+   SHA2s_4WAY_STEP( G, H, A, B, C, D, E, F,  2, 0 );
+   SHA2s_4WAY_STEP( F, G, H, A, B, C, D, E,  3, 0 );
+   SHA2s_4WAY_STEP( E, F, G, H, A, B, C, D,  4, 0 );
+   SHA2s_4WAY_STEP( D, E, F, G, H, A, B, C,  5, 0 );
+   SHA2s_4WAY_STEP( C, D, E, F, G, H, A, B,  6, 0 );
+   SHA2s_4WAY_STEP( B, C, D, E, F, G, H, A,  7, 0 );
+   SHA2s_4WAY_STEP( A, B, C, D, E, F, G, H,  8, 0 );
+   SHA2s_4WAY_STEP( H, A, B, C, D, E, F, G,  9, 0 );
+   SHA2s_4WAY_STEP( G, H, A, B, C, D, E, F, 10, 0 );
+   SHA2s_4WAY_STEP( F, G, H, A, B, C, D, E, 11, 0 );
+   SHA2s_4WAY_STEP( E, F, G, H, A, B, C, D, 12, 0 );
+   SHA2s_4WAY_STEP( D, E, F, G, H, A, B, C, 13, 0 );
+   SHA2s_4WAY_STEP( C, D, E, F, G, H, A, B, 14, 0 );
+   SHA2s_4WAY_STEP( B, C, D, E, F, G, H, A, 15, 0 );
+
+   for ( int j = 16; j < 64; j += 16 )
    {
-      SHA256_4WAY_STEP( A, B, C, D, E, F, G, H, i + 0 );
-      SHA256_4WAY_STEP( H, A, B, C, D, E, F, G, i + 1 );
-      SHA256_4WAY_STEP( G, H, A, B, C, D, E, F, i + 2 );
-      SHA256_4WAY_STEP( F, G, H, A, B, C, D, E, i + 3 );
-      SHA256_4WAY_STEP( E, F, G, H, A, B, C, D, i + 4 );
-      SHA256_4WAY_STEP( D, E, F, G, H, A, B, C, i + 5 );
-      SHA256_4WAY_STEP( C, D, E, F, G, H, A, B, i + 6 );
-      SHA256_4WAY_STEP( B, C, D, E, F, G, H, A, i + 7 );
+      W[ 0] = SHA2s_MEXP( 14,  9,  1,  0 );
+      W[ 1] = SHA2s_MEXP( 15, 10,  2,  1 );
+      W[ 2] = SHA2s_MEXP(  0, 11,  3,  2 );
+      W[ 3] = SHA2s_MEXP(  1, 12,  4,  3 );
+      W[ 4] = SHA2s_MEXP(  2, 13,  5,  4 );
+      W[ 5] = SHA2s_MEXP(  3, 14,  6,  5 );
+      W[ 6] = SHA2s_MEXP(  4, 15,  7,  6 );
+      W[ 7] = SHA2s_MEXP(  5,  0,  8,  7 );
+      W[ 8] = SHA2s_MEXP(  6,  1,  9,  8 );
+      W[ 9] = SHA2s_MEXP(  7,  2, 10,  9 );
+      W[10] = SHA2s_MEXP(  8,  3, 11, 10 );
+      W[11] = SHA2s_MEXP(  9,  4, 12, 11 );
+      W[12] = SHA2s_MEXP( 10,  5, 13, 12 );
+      W[13] = SHA2s_MEXP( 11,  6, 14, 13 );
+      W[14] = SHA2s_MEXP( 12,  7, 15, 14 );
+      W[15] = SHA2s_MEXP( 13,  8,  0, 15 );
+
+      SHA2s_4WAY_STEP( A, B, C, D, E, F, G, H,  0, j );
+      SHA2s_4WAY_STEP( H, A, B, C, D, E, F, G,  1, j );
+      SHA2s_4WAY_STEP( G, H, A, B, C, D, E, F,  2, j );
+      SHA2s_4WAY_STEP( F, G, H, A, B, C, D, E,  3, j );
+      SHA2s_4WAY_STEP( E, F, G, H, A, B, C, D,  4, j );
+      SHA2s_4WAY_STEP( D, E, F, G, H, A, B, C,  5, j );
+      SHA2s_4WAY_STEP( C, D, E, F, G, H, A, B,  6, j );
+      SHA2s_4WAY_STEP( B, C, D, E, F, G, H, A,  7, j );
+      SHA2s_4WAY_STEP( A, B, C, D, E, F, G, H,  8, j );
+      SHA2s_4WAY_STEP( H, A, B, C, D, E, F, G,  9, j );
+      SHA2s_4WAY_STEP( G, H, A, B, C, D, E, F, 10, j );
+      SHA2s_4WAY_STEP( F, G, H, A, B, C, D, E, 11, j );
+      SHA2s_4WAY_STEP( E, F, G, H, A, B, C, D, 12, j );
+      SHA2s_4WAY_STEP( D, E, F, G, H, A, B, C, 13, j );
+      SHA2s_4WAY_STEP( C, D, E, F, G, H, A, B, 14, j );
+      SHA2s_4WAY_STEP( B, C, D, E, F, G, H, A, 15, j );
    }
 
    r[0] = _mm_add_epi32( r[0], A );
@@ -250,7 +300,290 @@ void sha256_4way_close( sha256_4way_context *sc, void *dst )
 
 #if defined(__AVX2__)
 
-// SHA512 4 way 64 bit
+// SHA-256 8 way
+
+#define CHx(X, Y, Z) \
+   _mm256_xor_si256( _mm256_and_si256( _mm256_xor_si256( Y, Z ), X ), Z ) 
+
+#define MAJx(X, Y, Z) \
+   _mm256_or_si256( _mm256_and_si256( X, Y ), \
+                    _mm256_and_si256( _mm256_or_si256( X, Y ), Z ) )
+
+#define BSG2_0x(x) \
+   _mm256_xor_si256( _mm256_xor_si256( \
+       mm256_rotr_32(x,  2), mm256_rotr_32(x, 13) ), mm256_rotr_32( x, 22) )
+
+#define BSG2_1x(x) \
+   _mm256_xor_si256( _mm256_xor_si256( \
+       mm256_rotr_32(x,  6), mm256_rotr_32(x, 11) ), mm256_rotr_32( x, 25) )
+
+#define SSG2_0x(x) \
+   _mm256_xor_si256( _mm256_xor_si256( \
+       mm256_rotr_32(x,  7), mm256_rotr_32(x, 18) ), _mm256_srli_epi32(x, 3) ) 
+
+#define SSG2_1x(x) \
+   _mm256_xor_si256( _mm256_xor_si256( \
+       mm256_rotr_32(x, 17), mm256_rotr_32(x, 19) ), _mm256_srli_epi32(x, 10) )
+
+#define SHA2x_MEXP( a, b, c, d ) \
+     _mm256_add_epi32( _mm256_add_epi32( _mm256_add_epi32( \
+                    SSG2_1x( W[a] ), W[b] ), SSG2_0x( W[c] ) ), W[d] );
+
+#define SHA2s_8WAY_STEP(A, B, C, D, E, F, G, H, i, j) \
+do { \
+  register __m256i T1, T2; \
+  T1 = _mm256_add_epi32( _mm256_add_epi32( _mm256_add_epi32( \
+       _mm256_add_epi32( H, BSG2_1x(E) ), CHx(E, F, G) ), \
+                          _mm256_set1_epi32( K256[( (j)+(i) )] ) ), W[i] ); \
+  T2 = _mm256_add_epi32( BSG2_0x(A), MAJx(A, B, C) ); \
+  D  = _mm256_add_epi32( D,  T1 ); \
+  H  = _mm256_add_epi32( T1, T2 ); \
+} while (0)
+
+static void
+sha256_8way_round( __m256i *in, __m256i r[8] )
+{
+   register  __m256i A, B, C, D, E, F, G, H;
+   __m256i W[16];
+
+   W[ 0] = mm256_bswap_32( in[ 0] );
+   W[ 1] = mm256_bswap_32( in[ 1] );
+   W[ 2] = mm256_bswap_32( in[ 2] );
+   W[ 3] = mm256_bswap_32( in[ 3] );
+   W[ 4] = mm256_bswap_32( in[ 4] );
+   W[ 5] = mm256_bswap_32( in[ 5] );
+   W[ 6] = mm256_bswap_32( in[ 6] );
+   W[ 7] = mm256_bswap_32( in[ 7] );
+   W[ 8] = mm256_bswap_32( in[ 8] );
+   W[ 9] = mm256_bswap_32( in[ 9] );
+   W[10] = mm256_bswap_32( in[10] );
+   W[11] = mm256_bswap_32( in[11] );
+   W[12] = mm256_bswap_32( in[12] );
+   W[13] = mm256_bswap_32( in[13] );
+   W[14] = mm256_bswap_32( in[14] );
+   W[15] = mm256_bswap_32( in[15] );
+
+   A = r[0];
+   B = r[1];
+   C = r[2];
+   D = r[3];
+   E = r[4];
+   F = r[5];
+   G = r[6];
+   H = r[7];
+
+   SHA2s_8WAY_STEP( A, B, C, D, E, F, G, H,  0, 0 );
+
+//printf("sha256 8 step: D= %08lx H= %08lx\n",*(uint32_t*)&D,*(uint32_t*)&H);
+
+   SHA2s_8WAY_STEP( H, A, B, C, D, E, F, G,  1, 0 );
+   SHA2s_8WAY_STEP( G, H, A, B, C, D, E, F,  2, 0 );
+   SHA2s_8WAY_STEP( F, G, H, A, B, C, D, E,  3, 0 );
+   SHA2s_8WAY_STEP( E, F, G, H, A, B, C, D,  4, 0 );
+   SHA2s_8WAY_STEP( D, E, F, G, H, A, B, C,  5, 0 );
+   SHA2s_8WAY_STEP( C, D, E, F, G, H, A, B,  6, 0 );
+   SHA2s_8WAY_STEP( B, C, D, E, F, G, H, A,  7, 0 );
+   SHA2s_8WAY_STEP( A, B, C, D, E, F, G, H,  8, 0 );
+   SHA2s_8WAY_STEP( H, A, B, C, D, E, F, G,  9, 0 );
+   SHA2s_8WAY_STEP( G, H, A, B, C, D, E, F, 10, 0 );
+   SHA2s_8WAY_STEP( F, G, H, A, B, C, D, E, 11, 0 );
+   SHA2s_8WAY_STEP( E, F, G, H, A, B, C, D, 12, 0 );
+   SHA2s_8WAY_STEP( D, E, F, G, H, A, B, C, 13, 0 );
+   SHA2s_8WAY_STEP( C, D, E, F, G, H, A, B, 14, 0 );
+   SHA2s_8WAY_STEP( B, C, D, E, F, G, H, A, 15, 0 );
+
+//printf("sha256 8 step: A= %08lx B= %08lx\n",*(uint32_t*)&A,*(uint32_t*)&B);
+
+   for ( int j = 16; j < 64; j += 16 )
+   {
+      W[ 0] = SHA2x_MEXP( 14,  9,  1,  0 );
+      W[ 1] = SHA2x_MEXP( 15, 10,  2,  1 );
+      W[ 2] = SHA2x_MEXP(  0, 11,  3,  2 );
+      W[ 3] = SHA2x_MEXP(  1, 12,  4,  3 );
+      W[ 4] = SHA2x_MEXP(  2, 13,  5,  4 );
+      W[ 5] = SHA2x_MEXP(  3, 14,  6,  5 );
+      W[ 6] = SHA2x_MEXP(  4, 15,  7,  6 );
+      W[ 7] = SHA2x_MEXP(  5,  0,  8,  7 );
+      W[ 8] = SHA2x_MEXP(  6,  1,  9,  8 );
+      W[ 9] = SHA2x_MEXP(  7,  2, 10,  9 );
+      W[10] = SHA2x_MEXP(  8,  3, 11, 10 );
+      W[11] = SHA2x_MEXP(  9,  4, 12, 11 );
+      W[12] = SHA2x_MEXP( 10,  5, 13, 12 );
+      W[13] = SHA2x_MEXP( 11,  6, 14, 13 );
+      W[14] = SHA2x_MEXP( 12,  7, 15, 14 );
+      W[15] = SHA2x_MEXP( 13,  8,  0, 15 );
+
+      SHA2s_8WAY_STEP( A, B, C, D, E, F, G, H,  0, j );
+      SHA2s_8WAY_STEP( H, A, B, C, D, E, F, G,  1, j );
+      SHA2s_8WAY_STEP( G, H, A, B, C, D, E, F,  2, j );
+      SHA2s_8WAY_STEP( F, G, H, A, B, C, D, E,  3, j );
+      SHA2s_8WAY_STEP( E, F, G, H, A, B, C, D,  4, j );
+      SHA2s_8WAY_STEP( D, E, F, G, H, A, B, C,  5, j );
+      SHA2s_8WAY_STEP( C, D, E, F, G, H, A, B,  6, j );
+      SHA2s_8WAY_STEP( B, C, D, E, F, G, H, A,  7, j );
+      SHA2s_8WAY_STEP( A, B, C, D, E, F, G, H,  8, j );
+      SHA2s_8WAY_STEP( H, A, B, C, D, E, F, G,  9, j );
+      SHA2s_8WAY_STEP( G, H, A, B, C, D, E, F, 10, j );
+      SHA2s_8WAY_STEP( F, G, H, A, B, C, D, E, 11, j );
+      SHA2s_8WAY_STEP( E, F, G, H, A, B, C, D, 12, j );
+      SHA2s_8WAY_STEP( D, E, F, G, H, A, B, C, 13, j );
+      SHA2s_8WAY_STEP( C, D, E, F, G, H, A, B, 14, j );
+      SHA2s_8WAY_STEP( B, C, D, E, F, G, H, A, 15, j );
+   }
+
+   r[0] = _mm256_add_epi32( r[0], A );
+   r[1] = _mm256_add_epi32( r[1], B );
+   r[2] = _mm256_add_epi32( r[2], C );
+   r[3] = _mm256_add_epi32( r[3], D );
+   r[4] = _mm256_add_epi32( r[4], E );
+   r[5] = _mm256_add_epi32( r[5], F );
+   r[6] = _mm256_add_epi32( r[6], G );
+   r[7] = _mm256_add_epi32( r[7], H );
+}
+
+
+void sha256_8way_init( sha256_8way_context *sc )
+{
+   sc->count_high = sc->count_low = 0;
+   sc->val[0] = _mm256_set1_epi32( H256[0] );
+   sc->val[1] = _mm256_set1_epi32( H256[1] );
+   sc->val[2] = _mm256_set1_epi32( H256[2] );
+   sc->val[3] = _mm256_set1_epi32( H256[3] );
+   sc->val[4] = _mm256_set1_epi32( H256[4] );
+   sc->val[5] = _mm256_set1_epi32( H256[5] );
+   sc->val[6] = _mm256_set1_epi32( H256[6] );
+   sc->val[7] = _mm256_set1_epi32( H256[7] );
+}
+
+void sha256_8way( sha256_8way_context *sc, const void *data, size_t len )
+{
+   __m256i *vdata = (__m256i*)data;
+   size_t ptr;
+   const int buf_size = 64;
+/*
+printf("sha256 8 update1: len= %d\n", len);
+uint32_t* d = (uint32_t*)data;
+printf("sha256 8 in: %08lx %08lx %08lx %08lx\n",d[0],d[8],d[16],d[24]);
+printf("sha256 8 in: %08lx %08lx %08lx %08lx\n",d[32],d[40],d[48],d[56]);
+printf("sha256 8 in: %08lx %08lx %08lx %08lx\n",d[64],d[72],d[80],d[88]);
+printf("sha256 8 in: %08lx %08lx %08lx %08lx\n",d[96],d[104],d[112],d[120]);
+printf("sha256 8 in: %08lx %08lx %08lx %08lx\n",d[128],d[136],d[144],d[152]);
+printf("sha256 8 in: %08lx %08lx %08lx %08lx\n",d[160],d[168],d[176],d[184]);
+printf("sha256 8 in: %08lx %08lx %08lx %08lx\n",d[192],d[200],d[208],d[216]);
+*/
+   ptr = (unsigned)sc->count_low & (buf_size - 1U);
+   while ( len > 0 )
+   {
+      size_t clen;
+      uint32_t clow, clow2;
+
+      clen = buf_size - ptr;
+      if ( clen > len )
+         clen = len;
+      memcpy_256( sc->buf + (ptr>>2), vdata, clen>>2 );
+      vdata = vdata + (clen>>2);
+      ptr += clen;
+      len -= clen;
+      if ( ptr == buf_size )
+      {
+/*
+printf("sha256 8 update2: compress\n");
+d = (uint32_t*)sc->buf;
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[0],d[8],d[16],d[24]);
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[32],d[40],d[48],d[56]);
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[64],d[72],d[80],d[88]);
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[96],d[104],d[112],d[120]);
+d= (uint32_t*)sc->val;
+printf("sha256 8 val: %08lx %08lx %08lx %08lx\n",d[0],d[8],d[16],d[24]);
+printf("sha256 8 val: %08lx %08lx %08lx %08lx\n",d[32],d[40],d[48],d[56]);
+*/
+         sha256_8way_round( sc->buf, sc->val );
+/*
+printf("sha256 8 update3\n");
+d= (uint32_t*)sc->val;
+printf("sha256 8 val: %08lx %08lx %08lx %08lx\n",d[0],d[8],d[16],d[24]);
+printf("sha256 8 val: %08lx %08lx %08lx %08lx\n",d[32],d[40],d[48],d[56]);
+*/
+         ptr = 0;
+      }
+      clow = sc->count_low;
+      clow2 = SPH_T32( clow + clen );
+      sc->count_low = clow2;
+      if ( clow2 < clow )
+         sc->count_high++;
+   }
+}
+
+void sha256_8way_close( sha256_8way_context *sc, void *dst )
+{
+    unsigned ptr, u;
+    uint32_t low, high;
+    const int buf_size = 64;
+    const int pad = buf_size - 8;
+
+    ptr = (unsigned)sc->count_low & (buf_size - 1U);
+/*
+printf("sha256 8 close1: ptr= %d\n", ptr);
+uint32_t* d = (uint32_t*)sc->buf;
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[0],d[8],d[16],d[24]);
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[32],d[40],d[48],d[56]);
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[64],d[72],d[80],d[88]);
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[96],d[104],d[112],d[120]);
+*/
+
+    sc->buf[ ptr>>2 ] = _mm256_set1_epi32( 0x80 );
+    ptr += 4;
+
+    if ( ptr > pad )
+    {
+         memset_zero_256( sc->buf + (ptr>>2), (buf_size - ptr) >> 2 );
+
+//printf("sha256 8 close2: compress\n");
+//uint32_t* d = (uint32_t*)sc->buf;
+//printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[0],d[8],d[16],d[24]);
+
+
+         sha256_8way_round( sc->buf, sc->val );
+
+//d= (uint32_t*)sc->val;
+//printf("sha256 8 val: %08lx %08lx %08lx %08lx\n",d[0],d[8],d[16],d[24]);
+
+         memset_zero_256( sc->buf, pad >> 2 );
+    }
+    else
+         memset_zero_256( sc->buf + (ptr>>2), (pad - ptr) >> 2 );
+
+    low = sc->count_low;
+    high = (sc->count_high << 3) | (low >> 29);
+    low = low << 3;
+
+    sc->buf[ pad >> 2 ] =
+                 mm256_bswap_32( _mm256_set1_epi32( high ) );
+    sc->buf[ ( pad+4 ) >> 2 ] =
+                 mm256_bswap_32( _mm256_set1_epi32( low ) );
+/*
+d = (uint32_t*)sc->buf;
+printf("sha256 8 close3: compress\n");
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[0],d[8],d[16],d[24]);
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[32],d[40],d[48],d[56]);
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[64],d[72],d[80],d[88]);
+printf("sha256 8 buf: %08lx %08lx %08lx %08lx\n",d[96],d[104],d[112],d[120]);
+d= (uint32_t*)sc->val;
+printf("sha256 8 val: %08lx %08lx %08lx %08lx\n",d[0],d[8],d[16],d[24]);
+printf("sha256 8 val: %08lx %08lx %08lx %08lx\n",d[32],d[40],d[48],d[56]);
+*/
+
+    sha256_8way_round( sc->buf, sc->val );
+/*
+printf("sha256 8 val: %08lx %08lx %08lx %08lx\n",d[0],d[8],d[16],d[24]);
+printf("sha256 8 val: %08lx %08lx %08lx %08lx\n",d[32],d[40],d[48],d[56]);
+*/
+    for ( u = 0; u < 8; u ++ )
+       ((__m256i*)dst)[u] = mm256_bswap_32( sc->val[u] );
+}
+
+
+// SHA-512 4 way 64 bit
 
 static const sph_u64 H512[8] = {
         SPH_C64(0x6A09E667F3BCC908), SPH_C64(0xBB67AE8584CAA73B),
@@ -327,7 +660,7 @@ static const sph_u64 K512[80] = {
 
 #define SHA3_4WAY_STEP(A, B, C, D, E, F, G, H, i) \
 do { \
-  __m256i T1, T2; \
+  register __m256i T1, T2; \
   T1 = _mm256_add_epi64( _mm256_add_epi64( _mm256_add_epi64( \
        _mm256_add_epi64( H, BSG5_1(E) ), CH(E, F, G) ), \
                          _mm256_set1_epi64x( K512[i] ) ), W[i] ); \
@@ -340,7 +673,7 @@ static void
 sha512_4way_round( __m256i *in, __m256i r[8] )
 {
    int i;
-   __m256i A, B, C, D, E, F, G, H;
+   register __m256i A, B, C, D, E, F, G, H;
    __m256i W[80];
 
    for ( i = 0; i < 16; i++ )
@@ -428,7 +761,6 @@ void sha512_4way_close( sha512_4way_context *sc, void *dst )
     ptr = (unsigned)sc->count & (buf_size - 1U);
     sc->buf[ ptr>>3 ] = _mm256_set1_epi64x( 0x80 );
     ptr += 8;
-
     if ( ptr > pad )
     {
          memset_zero_256( sc->buf + (ptr>>3), (buf_size - ptr) >> 3 );

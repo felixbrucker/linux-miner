@@ -119,9 +119,11 @@ void init_algo_gate( algo_gate_t* gate )
    gate->gen_merkle_root         = (void*)&sha256d_gen_merkle_root;
    gate->stratum_gen_work        = (void*)&std_stratum_gen_work;
    gate->build_stratum_request   = (void*)&std_le_build_stratum_request;
+   gate->malloc_txs_request      = (void*)&std_malloc_txs_request;
    gate->set_target              = (void*)&std_set_target;
    gate->work_decode             = (void*)&std_le_work_decode;
    gate->submit_getwork_result   = (void*)&std_le_submit_getwork_result;
+   gate->build_block_header      = (void*)&std_build_block_header;
    gate->build_extraheader       = (void*)&std_build_extraheader;
    gate->set_work_data_endian    = (void*)&do_nothing;
    gate->calc_network_diff       = (void*)&std_calc_network_diff;
@@ -155,6 +157,7 @@ bool register_algo_gate( int algo, algo_gate_t *gate )
 
    switch (algo)
    {
+     case ALGO_ALLIUM:       register_allium_algo      ( gate ); break;
      case ALGO_ANIME:        register_anime_algo       ( gate ); break;
      case ALGO_ARGON2:       register_argon2_algo      ( gate ); break;
      case ALGO_AXIOM:        register_axiom_algo       ( gate ); break;
@@ -213,6 +216,7 @@ bool register_algo_gate( int algo, algo_gate_t *gate )
      case ALGO_X11:          register_x11_algo         ( gate ); break;
      case ALGO_X11EVO:       register_x11evo_algo      ( gate ); break;
      case ALGO_X11GOST:      register_x11gost_algo     ( gate ); break;
+     case ALGO_X12:          register_x12_algo         ( gate ); break;
      case ALGO_X13:          register_x13_algo         ( gate ); break;
      case ALGO_X13SM3:       register_x13sm3_algo      ( gate ); break;
      case ALGO_X14:          register_x14_algo         ( gate ); break;
@@ -298,6 +302,7 @@ const char* const algo_alias_map[][2] =
   { "lyra2",             "lyra2re"      },
   { "lyra2v2",           "lyra2rev2"    },
   { "lyra2zoin",         "lyra2z330"    },
+  { "myrgr",             "myr-gr"       },
   { "myriad",            "myr-gr"       },
   { "neo",               "neoscrypt"    },
   { "phi",               "phi1612"      },

@@ -361,7 +361,6 @@ struct work {
 	size_t xnonce2_len;
 	unsigned char *xnonce2;
         uint32_t nonces[8];
-        bool     nfound[8];
 };
 
 struct stratum_job {
@@ -451,7 +450,7 @@ void applog_hash(void *hash);
 void format_hashrate(double hashrate, char *output);
 void print_hash_tests(void);
 
-
+void scale_hash_for_display ( double* hashrate, char* units );
 
 struct thr_info {
         int id;
@@ -483,6 +482,7 @@ uint32_t* get_stratum_job_ntime();
 
 enum algos {
         ALGO_NULL,
+        ALGO_ALLIUM,
         ALGO_ANIME,
         ALGO_ARGON2,
         ALGO_AXIOM,       
@@ -542,6 +542,7 @@ enum algos {
         ALGO_X11,
         ALGO_X11EVO,         
         ALGO_X11GOST,
+        ALGO_X12,
         ALGO_X13,         
         ALGO_X13SM3,
         ALGO_X14,        
@@ -557,6 +558,7 @@ enum algos {
 };
 static const char* const algo_names[] = {
         NULL,
+        "allium",
         "anime",
         "argon2",
         "axiom",
@@ -616,6 +618,7 @@ static const char* const algo_names[] = {
         "x11",
         "x11evo",
         "x11gost",
+        "x12",
         "x13",
         "x13sm3",
         "x14",
@@ -645,6 +648,10 @@ extern int opt_timeout;
 extern bool want_longpoll;
 extern bool have_longpoll;
 extern bool have_gbt;
+extern char*  lp_id;
+extern char *rpc_userpass;
+extern const char *gbt_lp_req;
+extern const char *getwork_req;
 extern bool allow_getwork;
 extern bool want_stratum;
 extern bool have_stratum;
@@ -686,6 +693,7 @@ static char const usage[] = "\
 Usage: " PACKAGE_NAME " [OPTIONS]\n\
 Options:\n\
   -a, --algo=ALGO       specify the algorithm to use\n\
+                          allium       Garlicoin (GRLC)\n\
                           anime        Animecoin (ANI)\n\
                           argon2\n\
                           axiom        Shabal-256 MemoHash\n\
@@ -745,6 +753,7 @@ Options:\n\
                           x11          Dash\n\
                           x11evo       Revolvercoin (XRE)\n\
                           x11gost      sib (SibCoin)\n\
+                          x12          Galaxie Cash (GCH)\n\
                           x13          X13\n\
                           x13sm3       hsr (Hshare)\n\
                           x14          X14\n\

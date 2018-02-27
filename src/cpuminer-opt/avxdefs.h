@@ -11,6 +11,10 @@
 // 32 bytes for 256 bit vectors. 64 byte alignment is recommended for
 // best cache alignment.
 //
+// Windows has problems with 256 bit vectors as function arguments passed by 
+// value. Stack alignment is only guaranteed to 16 bytes and 32 is required.
+// Always use pointers for 256 bit arguments.
+//
 // There exist duplicates of some functions. In general the first defined
 // is preferred as it is more efficient but also more restrictive and may
 // not be applicable. The less efficient versions are more flexible.
@@ -93,7 +97,7 @@ union m128_v8 {
 };
 typedef union m128_v8 m128_v8;
 
-// Compile time definition macros, for initializing only.
+// Compile time definition macros, for compile time initializing only.
 // x must be a scalar constant.
 #define mm_setc_64( x1, x0 ) {{ x1, x0 }}
 #define mm_setc1_64( x )     {{  x,  x }}
@@ -111,7 +115,7 @@ typedef union m128_v8 m128_v8;
                    x07, x06, x05, x04, x03, x02, x01, x00 }}
 #define mm_setc1_8( x ) {{ x,x,x,x, x,x,x,x, x,x,x,x, x,x,x,x }}
 
-// Compile time constants, use only for initializing.
+// Compile time constants, use only for compile time initializing.
 #define c128_zero      mm_setc1_64( 0ULL )
 #define c128_neg1      mm_setc1_64( 0xFFFFFFFFFFFFFFFFULL )
 #define c128_one_128   mm_setc_64(  0ULL, 1ULL )  
@@ -178,6 +182,10 @@ static inline __m128i foo()
 // returns p[i]
 #define casti_m128i(p,i) (((__m128i*)(p))[(i)])
 
+// p = any aligned pointer, o = scaled offset
+// returns p+o
+#define casto_m128i(p,i) (((__m128i*)(p))+(i))
+
 //
 // Memory functions
 // n = number of __m128i, bytes/16
@@ -214,6 +222,7 @@ static inline void memset_64( uint64_t *dst, uint64_t a,  int n )
 //
 // Bit operations
 
+// Bitfield extraction/insertion.
 // Return a vector with n bits extracted and right justified from each
 // element of v starting at bit i.
 static inline __m128i mm_bfextract_64( __m128i v, int i, int n )
@@ -262,6 +271,10 @@ static inline __m128i mm_bitextract_16( __m128i v, int i )
 // obsolete, use bfextract with n = 1
 // Return vector with bit i of each element of v as a bool
 // (shifted to position 0)
+#define mm_bittest_64( v, i ) mm_bfextract_64( v, i, 1 )
+#define mm_bittest_32( v, i ) mm_bfextract_32( v, i, 1 )
+#define mm_bittest_16( v, i ) mm_bfextract_16( v, i, 1 )
+/*
 static inline __m128i mm_bittest_64( __m128i v, int i )
 {   return _mm_and_si128( _mm_srli_epi64( v, i ), m128_one_64 ); }
 
@@ -270,6 +283,7 @@ static inline __m128i mm_bittest_32( __m128i v, int i )
 
 static inline __m128i mm_bittest_16( __m128i v, int i )
 {   return _mm_and_si128( _mm_srli_epi16( v, i ), m128_one_64 ); }
+*/
 
 // Return vector with bit i of each element in v set/cleared
 static inline __m128i mm_bitset_64( __m128i v, int i )
@@ -661,6 +675,10 @@ typedef union m256_v8 m256_v8;
 // returns p[i]
 #define casti_m256i(p,i) (((__m256i*)(p))[(i)])
 
+// p = any aligned pointer, o = scaled offset
+// returns p+o
+#define casto_m256i(p,i) (((__m256i*)(p))+(i))
+
 //
 // Memory functions
 // n = number of 256 bit (32 byte) vectors
@@ -770,6 +788,7 @@ static inline uint8_t mm256_vindex_to_imm8_16( __m256i v, uint8_t n )
 //
 // Bit operations
 
+// Bit field extraction/insertion.
 // Return a vector with bits [i..i+n] extracted and right justified from each
 // element of v.
 static inline __m256i mm256_bfextract_64( __m256i v, int i, int n )
@@ -810,7 +829,6 @@ static inline __m256i mm256_bfinsert_16( __m256i v, __m256i a, int i, int n )
         _mm256_slli_epi16( a, i) );
 }
 
-
 // return bit n in position, all other bits cleared
 #define mm256_bitextract_64 ( x, n ) \
    _mm256_and_si256( _mm256_slli_epi64( m256_one_64, n ), x )
@@ -820,12 +838,18 @@ static inline __m256i mm256_bfinsert_16( __m256i v, __m256i a, int i, int n )
    _mm256_and_si256( _mm256_slli_epi16( m256_one_16, n ), x )
 
 // Return bit n as bool (bit 0)
+#define mm_bittest_64( v, i ) mm_bfextract_64( v, i, 1 )
+#define mm_bittest_32( v, i ) mm_bfextract_32( v, i, 1 )
+#define mm_bittest_16( v, i ) mm_bfextract_16( v, i, 1 )
+
+/*
 #define mm256_bittest_64( x, n ) \
    _mm256_and_si256( m256_one_64, _mm256_srli_epi64( x, n ) )
 #define mm256_bittest_32( x, n ) \
    _mm256_and_si256( m256_one_32, _mm256_srli_epi32( x, n ) )
 #define mm256_bittest_16( x, n ) \
    _mm256_and_si256( m256_one_16, _mm256_srli_epi16( x, n ) )
+*/
 
 // Return x with bit n set/cleared in all elements
 #define mm256_bitset_64( x, n ) \
@@ -1084,7 +1108,41 @@ static inline __m256i mm256_bswap_16( __m256i v )
 
 // Pseudo parallel AES
 // Probably noticeably slower than using pure 128 bit vectors
-inline __m256i mm256_aesenc_2x128( __m256i x, __m256i k )
+// Windows has problems with __m256i args paddes by value.
+// Use pointers to facilitate __m256i to __m128i conversion.
+// When key is used switching keys may reduce performance.
+inline __m256i mm256_aesenc_2x128( void *msg, void *key )
+{
+   ((__m128i*)msg)[0] = _mm_aesenc_si128( ((__m128i*)msg)[0],
+                                          ((__m128i*)key)[0] );
+   ((__m128i*)msg)[1] = _mm_aesenc_si128( ((__m128i*)msg)[1],
+                                          ((__m128i*)key)[1] );
+}
+
+inline __m256i mm256_aesenc_nokey_2x128( void *msg )
+{
+   ((__m128i*)msg)[0] = _mm_aesenc_si128( ((__m128i*)msg)[0], m128_zero );
+   ((__m128i*)msg)[1] = _mm_aesenc_si128( ((__m128i*)msg)[1], m128_zero );
+}
+
+// source msg preserved
+/*
+inline __m256i mm256_aesenc_2x128( void *out, void *msg, void *key )
+{
+   ((__m128i*)out)[0] = _mm_aesenc_si128( ((__m128i*)msg)[0],
+                                          ((__m128i*)key)[0] );
+   ((__m128i*)out)[1] = _mm_aesenc_si128( ((__m128i*)msg)[1],
+                                          ((__m128i*)key)[1] );
+}
+
+inline __m256i mm256_aesenc_nokey_2x128( void *out, void *msg )
+{
+   ((__m128i*)out)[0] = _mm_aesenc_si128( ((__m128i*)msg)[0], m128_zero );
+   ((__m128i*)out)[1] = _mm_aesenc_si128( ((__m128i*)msg)[1], m128_zero );
+}
+*/
+
+inline __m256i mm256_aesenc_2x128_obs( __m256i x, __m256i k )
 {
     __m128i hi, lo, khi, klo;
 
@@ -1095,7 +1153,7 @@ inline __m256i mm256_aesenc_2x128( __m256i x, __m256i k )
     return mm256_pack_2x128( hi, lo );
 }
 
-inline __m256i mm256_aesenc_nokey_2x128( __m256i x )
+inline __m256i mm256_aesenc_nokey_2x128_obs( __m256i x )
 {
     __m128i hi, lo;
 
@@ -1104,6 +1162,7 @@ inline __m256i mm256_aesenc_nokey_2x128( __m256i x )
     hi = _mm_aesenc_si128( hi, m128_zero );
     return mm256_pack_2x128( hi, lo );
 }
+
 
 #endif  // AVX2
 
@@ -1478,6 +1537,38 @@ static inline void mm256_interleave_8x32( void *dst, const void *src0,
                              s3[18], s2[18], s1[18], s0[18] );
    d[19] = _mm256_set_epi32( s7[19], s6[19], s5[19], s4[19],
                              s3[19], s2[19], s1[19], s0[19] );
+
+   if ( bit_len <= 640 ) return;
+
+   d[20] = _mm256_set_epi32( s7[20], s6[20], s5[20], s4[20],
+                             s3[20], s2[20], s1[20], s0[20] );
+   d[21] = _mm256_set_epi32( s7[21], s6[21], s5[21], s4[21],
+                             s3[21], s2[21], s1[21], s0[21] );
+   d[22] = _mm256_set_epi32( s7[22], s6[22], s5[22], s4[22],
+                             s3[22], s2[22], s1[22], s0[22] );
+   d[23] = _mm256_set_epi32( s7[23], s6[23], s5[23], s4[23],
+                             s3[23], s2[23], s1[23], s0[23] );
+
+   if ( bit_len <= 768 ) return;
+
+   d[24] = _mm256_set_epi32( s7[24], s6[24], s5[24], s4[24],
+                             s3[24], s2[24], s1[24], s0[24] );
+   d[25] = _mm256_set_epi32( s7[25], s6[25], s5[25], s4[25],
+                             s3[25], s2[25], s1[25], s0[25] );
+   d[26] = _mm256_set_epi32( s7[26], s6[26], s5[26], s4[26],
+                             s3[26], s2[26], s1[26], s0[26] );
+   d[27] = _mm256_set_epi32( s7[27], s6[27], s5[27], s4[27],
+                             s3[27], s2[27], s1[27], s0[27] );
+   d[28] = _mm256_set_epi32( s7[28], s6[28], s5[28], s4[28],
+                             s3[28], s2[28], s1[28], s0[28] );
+   d[29] = _mm256_set_epi32( s7[29], s6[29], s5[29], s4[29],
+                             s3[29], s2[29], s1[29], s0[29] );
+   d[30] = _mm256_set_epi32( s7[30], s6[30], s5[30], s4[30],
+                             s3[30], s2[30], s1[30], s0[30] );
+   d[31] = _mm256_set_epi32( s7[31], s6[31], s5[31], s4[31],
+                             s3[31], s2[31], s1[31], s0[31] );
+
+   // bit_len == 1024
 }
 
 // probably obsolete with double pack 2x32->64, 4x64->256.
@@ -1556,31 +1647,71 @@ static inline void mm256_deinterleave_8x32( void *dst0, void *dst1, void *dst2,
 
    // null change for overrun space, vector indexing doesn't work for
    // 32 bit data
+   if ( bit_len <= 640 )
+   {
+      uint32_t *d = ((uint32_t*)d0) + 8;
+      d0[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
+                                  s[152], s[144], s[136], s[128] );
+      d = ((uint32_t*)d1) + 8;
+      d1[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
+                                  s[153], s[145], s[137], s[129] );
+      d = ((uint32_t*)d2) + 8;
+      d2[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
+                                  s[154], s[146], s[138], s[130]);
+      d = ((uint32_t*)d3) + 8;
+      d3[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
+                                  s[155], s[147], s[139], s[131] );
+      d = ((uint32_t*)d4) + 8;
+      d4[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
+                                  s[156], s[148], s[140], s[132] );
+      d = ((uint32_t*)d5) + 8;
+      d5[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
+                                  s[157], s[149], s[141], s[133] );
+      d = ((uint32_t*)d6) + 8;
+      d6[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
+                                  s[158], s[150], s[142], s[134] );
+      d = ((uint32_t*)d7) + 8;
+      d7[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
+                                  s[159], s[151], s[143], s[135] );
+      return;
+   }
 
-   uint32_t *d = ((uint32_t*)d0) + 8;
-   d0[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
-                               s[152], s[144], s[136], s[128] );
-   d = ((uint32_t*)d1) + 8;
-   d1[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
-                               s[153], s[145], s[137], s[129] );
-   d = ((uint32_t*)d2) + 8;
-   d2[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
-                               s[154], s[146], s[138], s[130]);
-   d = ((uint32_t*)d3) + 8;
-   d3[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
-                               s[155], s[147], s[139], s[131] );
-   d = ((uint32_t*)d4) + 8;
-   d4[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
-                               s[156], s[148], s[140], s[132] );
-   d = ((uint32_t*)d5) + 8;
-   d5[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
-                               s[157], s[149], s[141], s[133] );
-   d = ((uint32_t*)d6) + 8;
-   d6[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
-                               s[158], s[150], s[142], s[134] );
-   d = ((uint32_t*)d7) + 8;
-   d7[2] = _mm256_set_epi32( *(d+7), *(d+6), *(d+5), *(d+4),
-                               s[159], s[151], s[143], s[135] );
+   d0[2] = _mm256_set_epi32( s[184], s[176], s[168], s[160],
+                             s[152], s[144], s[136], s[128] );
+   d1[2] = _mm256_set_epi32( s[185], s[177], s[169], s[161],
+                             s[153], s[145], s[137], s[129] );
+   d2[2] = _mm256_set_epi32( s[186], s[178], s[170], s[162],
+                             s[154], s[146], s[138], s[130] );
+   d3[2] = _mm256_set_epi32( s[187], s[179], s[171], s[163],
+                             s[155], s[147], s[139], s[131] );
+   d4[2] = _mm256_set_epi32( s[188], s[180], s[172], s[164],
+                             s[156], s[148], s[140], s[132] );
+   d5[2] = _mm256_set_epi32( s[189], s[181], s[173], s[165],
+                             s[157], s[149], s[141], s[133] );
+   d6[2] = _mm256_set_epi32( s[190], s[182], s[174], s[166],
+                             s[158], s[150], s[142], s[134] );
+   d7[2] = _mm256_set_epi32( s[191], s[183], s[175], s[167],
+                             s[159], s[151], s[143], s[135] );
+
+   if ( bit_len <= 768 ) return;
+
+   d0[3] = _mm256_set_epi32( s[248], s[240], s[232], s[224],
+                             s[216], s[208], s[200], s[192] );
+   d1[3] = _mm256_set_epi32( s[249], s[241], s[233], s[225],
+                             s[217], s[209], s[201], s[193] );
+   d2[3] = _mm256_set_epi32( s[250], s[242], s[234], s[226],
+                             s[218], s[210], s[202], s[194] );
+   d3[3] = _mm256_set_epi32( s[251], s[243], s[235], s[227],
+                             s[219], s[211], s[203], s[195] );
+   d4[3] = _mm256_set_epi32( s[252], s[244], s[236], s[228],
+                             s[220], s[212], s[204], s[196] );
+   d5[3] = _mm256_set_epi32( s[253], s[245], s[237], s[229],
+                             s[221], s[213], s[205], s[197] );
+   d6[3] = _mm256_set_epi32( s[254], s[246], s[238], s[230],
+                             s[222], s[214], s[206], s[198] );
+   d7[3] = _mm256_set_epi32( s[255], s[247], s[239], s[231],
+                             s[223], s[215], s[207], s[199] );
+// bit_len == 1024
 }
 
 // Deinterleave 8 arrays into indivdual buffers for scalar processing
